@@ -1,8 +1,7 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 // src/components/MobileVerify.jsx
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import * as faceapi from 'face-api.js/dist/face-api.min.js';
+import * as faceapi from 'face-api.js';
 import io from 'socket.io-client';
 import axios from 'axios';
 import { config } from '../config';
@@ -40,21 +39,44 @@ function MobileVerify() {
 
   const loadModels = async () => {
     try {
-      setStatus('📦 Loading AI models...');
-      const MODEL_URL = '/models';
+      setStatus('📦 Loading AI models... (this may take a moment)');
       
-      await Promise.all([
-        faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-      ]);
+      const MODEL_URL = `${window.location.origin}/models`;
+      
+      console.log('📍 Loading models from:', MODEL_URL);
+
+      // Load models one by one with better error handling
+      await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL)
+        .catch(err => {
+          console.error('❌ SSD MobileNet loading failed:', err);
+          throw new Error('Failed to load face detection model');
+        });
+      
+      console.log('✅ Face detection model loaded');
+
+      await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL)
+        .catch(err => {
+          console.error('❌ Face Landmark loading failed:', err);
+          throw new Error('Failed to load landmark model');
+        });
+      
+      console.log('✅ Landmark model loaded');
+
+      await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+        .catch(err => {
+          console.error('❌ Face Recognition loading failed:', err);
+          throw new Error('Failed to load recognition model');
+        });
+      
+      console.log('✅ Recognition model loaded');
       
       setModelsLoaded(true);
       setStatus('📸 Starting camera...');
       await startCamera();
+      
     } catch (error) {
-      setStatus('❌ Failed to load AI models');
       console.error('Model loading error:', error);
+      setStatus('❌ Failed to load AI models. Please check internet connection and refresh.');
     }
   };
 
@@ -73,11 +95,11 @@ function MobileVerify() {
         videoRef.current.onloadedmetadata = () => {
           videoRef.current.play();
           setVideoReady(true);
-          setStatus('✅ Position your face and tap "Capture"');
+          setStatus('✅ Ready! Position your face and tap "Capture"');
         };
       }
     } catch (error) {
-      setStatus('❌ Camera access denied');
+      setStatus('❌ Camera access denied. Please allow camera permissions.');
       console.error('Camera error:', error);
     }
   };
@@ -89,12 +111,10 @@ function MobileVerify() {
       setStatus('❌ Invalid session');
     }
 
-    // Initialize socket
     if (!socket) {
       socket = io(config.API_URL);
     }
 
-    // Cleanup function
     return () => {
       const video = videoRef.current;
       if (video && video.srcObject) {
@@ -194,6 +214,15 @@ function MobileVerify() {
         }}>
           <p style={styles.statusText}>{status}</p>
         </div>
+
+        {!modelsLoaded && status.includes('❌') && (
+          <button 
+            onClick={fetchSessionData}
+            style={{...styles.button, backgroundColor: '#6c757d', marginTop: '10px'}}
+          >
+            🔄 Retry Loading
+          </button>
+        )}
 
         <div style={styles.tips}>
           <p style={styles.tipsTitle}>💡 Tips:</p>
