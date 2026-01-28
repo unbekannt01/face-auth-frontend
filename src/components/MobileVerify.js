@@ -13,12 +13,15 @@ function MobileVerify() {
   const { sessionId } = useParams();
   const navigate = useNavigate();
   const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const detectionIntervalRef = useRef(null);
+  
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [status, setStatus] = useState('🔄 Loading session...');
   const [sessionData, setSessionData] = useState(null);
   const [capturing, setCapturing] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
-  const [facingMode, setFacingMode] = useState('user'); // 'user' = front, 'environment' = back
+  const [facingMode, setFacingMode] = useState('user');
   const [faceDetected, setFaceDetected] = useState(false);
 
   const fetchSessionData = useCallback(async () => {
@@ -45,7 +48,6 @@ function MobileVerify() {
     try {
       setStatus('📦 Loading AI models... (this may take a moment)');
       
-      // Use CDN for models
       const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
       
       console.log('📍 Loading models from CDN:', MODEL_URL);
@@ -65,55 +67,112 @@ function MobileVerify() {
       
     } catch (error) {
       console.error('Model loading error:', error);
-      setStatus('❌ Failed to load AI models. Please check internet connection and refresh.');
+      setStatus('❌ Failed to load AI models. Please refresh.');
     }
+  };
+
+  const stopCamera = () => {
+    // Stop detection interval
+    if (detectionIntervalRef.current) {
+      clearInterval(detectionIntervalRef.current);
+      detectionIntervalRef.current = null;
+    }
+
+    // Stop video stream
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => {
+        track.stop();
+        console.log('Camera track stopped:', track.kind);
+      });
+      streamRef.current = null;
+    }
+
+    // Clear video element
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+
+    setVideoReady(false);
+    setFaceDetected(false);
   };
 
   const startCamera = async () => {
     try {
-      // Stop existing stream if any
-      if (videoRef.current && videoRef.current.srcObject) {
-        videoRef.current.srcObject.getTracks().forEach(track => track.stop());
-      }
+      // Stop existing camera first
+      stopCamera();
 
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
+      setStatus('📸 Starting camera...');
+      console.log('Requesting camera with facingMode:', facingMode);
+
+      const constraints = {
+        video: {
           facingMode: facingMode,
           width: { ideal: 1280 },
           height: { ideal: 720 }
-        } 
-      });
+        }
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
       
+      console.log('✅ Camera stream obtained');
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        
+        // Wait for video to be ready
         videoRef.current.onloadedmetadata = () => {
-          videoRef.current.play();
-          setVideoReady(true);
-          setStatus('✅ Ready! Position your face and tap "Capture"');
-          startFaceDetection();
+          console.log('Video metadata loaded');
+          videoRef.current.play()
+            .then(() => {
+              console.log('✅ Video playing');
+              setVideoReady(true);
+              setStatus('✅ Ready! Position your face');
+              startFaceDetection();
+            })
+            .catch(err => {
+              console.error('Video play error:', err);
+              setStatus('❌ Failed to start video');
+            });
         };
       }
     } catch (error) {
-      setStatus('❌ Camera access denied. Please allow camera permissions.');
       console.error('Camera error:', error);
+      setStatus('❌ Camera access denied. Please allow permissions.');
     }
   };
 
   const switchCamera = async () => {
+    console.log('Switching camera from', facingMode);
     const newFacingMode = facingMode === 'user' ? 'environment' : 'user';
     setFacingMode(newFacingMode);
-    setVideoReady(false);
-    setFaceDetected(false);
-    setStatus('📸 Switching camera...');
+    setStatus('🔄 Switching camera...');
     
-    // Restart camera with new facing mode
-    await startCamera();
+    // Camera will restart due to facingMode change in useEffect
   };
 
-  // Real-time face detection
+  // Watch facingMode changes
+  useEffect(() => {
+    if (modelsLoaded && facingMode) {
+      startCamera();
+    }
+    
+    return () => {
+      stopCamera();
+    };
+  }, [facingMode, modelsLoaded]);
+
   const startFaceDetection = () => {
-    const detectFace = async () => {
-      if (videoRef.current && videoReady && !capturing) {
+    console.log('Starting face detection loop');
+    
+    // Clear any existing interval
+    if (detectionIntervalRef.current) {
+      clearInterval(detectionIntervalRef.current);
+    }
+
+    // Detect face every 500ms
+    detectionIntervalRef.current = setInterval(async () => {
+      if (videoRef.current && videoReady && !capturing && modelsLoaded) {
         try {
           const detection = await faceapi
             .detectSingleFace(videoRef.current)
@@ -121,17 +180,10 @@ function MobileVerify() {
 
           setFaceDetected(!!detection);
         } catch (error) {
-          // Ignore detection errors during continuous detection
+          // Silently ignore detection errors
         }
       }
-      
-      // Continue detection loop
-      if (videoReady && !capturing) {
-        requestAnimationFrame(detectFace);
-      }
-    };
-    
-    detectFace();
+    }, 500);
   };
 
   useEffect(() => {
@@ -143,21 +195,22 @@ function MobileVerify() {
 
     if (!socket) {
       socket = io(config.API_URL);
+      console.log('Socket connected to:', config.API_URL);
     }
 
     return () => {
-      const video = videoRef.current;
-      if (video && video.srcObject) {
-        video.srcObject.getTracks().forEach(track => track.stop());
-      }
+      stopCamera();
     };
   }, [sessionId, fetchSessionData]);
 
   const captureFace = async () => {
-    if (!modelsLoaded || capturing || !sessionData || !videoReady) return;
+    if (!modelsLoaded || capturing || !sessionData || !videoReady) {
+      console.log('Capture blocked:', { modelsLoaded, capturing, sessionData: !!sessionData, videoReady });
+      return;
+    }
 
     setCapturing(true);
-    setStatus('🔍 Detecting face...');
+    setStatus('🔍 Detecting and capturing face...');
 
     try {
       const detections = await faceapi
@@ -168,35 +221,47 @@ function MobileVerify() {
       if (detections) {
         const faceDescriptor = Array.from(detections.descriptor);
         
-        setStatus('✅ Face captured! Verifying...');
+        console.log('Face captured, descriptor length:', faceDescriptor.length);
+        setStatus('✅ Face captured! Verifying with registered face...');
 
-        if (socket) {
+        // Send to backend for verification
+        if (socket && socket.connected) {
           socket.emit('face-captured', {
             sessionId: sessionData.sessionId,
-            faceDescriptor,
+            faceDescriptor: faceDescriptor,
             email: sessionData.email,
-            password: sessionData.password
+            password: sessionData.password,
+            type: sessionData.type
           });
+
+          console.log('Face data sent to server');
+        } else {
+          console.error('Socket not connected!');
+          setStatus('❌ Connection error. Please try again.');
+          setCapturing(false);
+          return;
         }
 
         // Stop camera
-        if (videoRef.current && videoRef.current.srcObject) {
-          videoRef.current.srcObject.getTracks().forEach(track => track.stop());
-        }
+        stopCamera();
 
-        // Redirect to success page after 2 seconds
+        // Wait for server response
         setTimeout(() => {
-          setStatus('✅ Verification successful!');
-          navigate('/verification-success');
-        }, 2000);
+          setStatus('⏳ Waiting for verification...');
+        }, 1000);
+
+        // Navigate to success page after delay
+        setTimeout(() => {
+          navigate('/verification-success?type=' + sessionData.type);
+        }, 3000);
 
       } else {
         setStatus('❌ No face detected. Please try again.');
         setCapturing(false);
       }
     } catch (error) {
-      setStatus('❌ Detection failed. Please try again.');
       console.error('Face detection error:', error);
+      setStatus('❌ Detection failed. Please try again.');
       setCapturing(false);
     }
   };
@@ -219,28 +284,28 @@ function MobileVerify() {
             playsInline
             style={styles.video}
           />
+          
           <div style={styles.overlay}>
             <div style={{
               ...styles.faceGuide,
               borderColor: faceDetected ? '#4CAF50' : '#667eea',
-              boxShadow: faceDetected ? '0 0 40px rgba(76, 175, 80, 0.6)' : '0 0 40px rgba(102, 126, 234, 0.6)'
+              boxShadow: faceDetected 
+                ? '0 0 40px rgba(76, 175, 80, 0.6)' 
+                : '0 0 40px rgba(102, 126, 234, 0.6)'
             }}>
               <div style={styles.guideLine} />
             </div>
           </div>
           
-          {/* Camera switch button */}
-          {videoReady && (
+          {videoReady && !capturing && (
             <button
               onClick={switchCamera}
               style={styles.cameraSwitchBtn}
-              disabled={capturing}
             >
-              🔄 Switch Camera
+              🔄 {facingMode === 'user' ? 'Switch to Back' : 'Switch to Front'}
             </button>
           )}
           
-          {/* Face detection indicator */}
           {videoReady && (
             <div style={{
               ...styles.detectionIndicator,
@@ -256,8 +321,8 @@ function MobileVerify() {
           disabled={!videoReady || capturing || !faceDetected}
           style={{
             ...styles.button,
-            backgroundColor: !videoReady || capturing || !faceDetected ? '#94a3b8' : '#667eea',
-            cursor: !videoReady || capturing || !faceDetected ? 'not-allowed' : 'pointer'
+            backgroundColor: (!videoReady || capturing || !faceDetected) ? '#94a3b8' : '#667eea',
+            cursor: (!videoReady || capturing || !faceDetected) ? 'not-allowed' : 'pointer'
           }}
         >
           {capturing ? '⏳ Processing...' : '📸 Capture Face'}
@@ -285,11 +350,11 @@ function MobileVerify() {
         <div style={styles.tips}>
           <p style={styles.tipsTitle}>💡 Tips:</p>
           <ul style={styles.tipsList}>
-            <li>✨ Good lighting required</li>
-            <li>👤 Face camera directly</li>
-            <li>😐 Neutral expression</li>
-            <li>📏 Stay in frame</li>
-            <li>🔄 Use camera switch if needed</li>
+            <li>✨ Ensure good lighting</li>
+            <li>👤 Face the camera directly</li>
+            <li>😐 Keep neutral expression</li>
+            <li>📏 Stay within the frame</li>
+            <li>🔄 Try switching camera if needed</li>
           </ul>
         </div>
       </div>
@@ -341,7 +406,8 @@ const styles = {
   video: {
     width: '100%',
     height: 'auto',
-    display: 'block'
+    display: 'block',
+    transform: 'scaleX(-1)' // Mirror effect for front camera
   },
   overlay: {
     position: 'absolute',
@@ -358,10 +424,8 @@ const styles = {
     position: 'relative',
     width: '220px',
     height: '280px',
-    border: '4px solid #667eea',
+    border: '4px solid',
     borderRadius: '50%',
-    boxShadow: '0 0 40px rgba(102, 126, 234, 0.6)',
-    animation: 'pulse 2s ease-in-out infinite',
     transition: 'all 0.3s ease'
   },
   guideLine: {
@@ -370,8 +434,8 @@ const styles = {
     left: '0',
     right: '0',
     height: '2px',
-    backgroundColor: '#667eea',
-    boxShadow: '0 0 10px rgba(102, 126, 234, 0.8)',
+    backgroundColor: 'currentColor',
+    opacity: 0.5,
     transform: 'translateY(-50%)'
   },
   cameraSwitchBtn: {
@@ -379,14 +443,15 @@ const styles = {
     top: '15px',
     right: '15px',
     padding: '10px 15px',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     border: 'none',
     borderRadius: '20px',
-    fontSize: '14px',
+    fontSize: '13px',
     fontWeight: 'bold',
     cursor: 'pointer',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-    zIndex: 10
+    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+    zIndex: 10,
+    color: '#1e293b'
   },
   detectionIndicator: {
     position: 'absolute',
@@ -445,23 +510,5 @@ const styles = {
     fontSize: '14px'
   }
 };
-
-const styleSheet = document.createElement("style");
-styleSheet.innerText = `
-  @keyframes pulse {
-    0%, 100% { 
-      opacity: 1;
-      transform: scale(1);
-    }
-    50% { 
-      opacity: 0.8;
-      transform: scale(1.03);
-    }
-  }
-`;
-if (!document.head.querySelector('style[data-mobileverify]')) {
-  styleSheet.setAttribute('data-mobileverify', 'true');
-  document.head.appendChild(styleSheet);
-}
 
 export default MobileVerify;

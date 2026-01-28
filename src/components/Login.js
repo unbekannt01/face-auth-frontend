@@ -19,36 +19,59 @@ function Login() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    socket.on('face-verified', async (data) => {
-      if (data.success) {
-        setStatus('✅ Face verified! Logging in...');
-        setLoading(true);
+    // Listen for face verification from mobile
+    socket.on('face-verification-complete', async (data) => {
+      console.log('Face verification result:', data);
+      
+      if (data.sessionId === sessionId) {
+        if (data.success) {
+          setStatus('✅ Face verified! Logging in...');
+          setLoading(true);
 
-        try {
-          const response = await axios.post(`${config.API_URL}/api/auth/login`, {
-            email: data.email,
-            password: data.password,
-            faceDescriptor: data.faceDescriptor
-          });
+          try {
+            // FIXED: Using correct backend route
+            const response = await axios.post(`${config.API_URL}/api/auth/verify-login`, {
+              email: email,
+              password: password,
+              faceDescriptor: data.faceDescriptor,
+              sessionId: sessionId
+            });
 
-          if (response.data.success) {
-            // Save token to localStorage
-            localStorage.setItem('authToken', response.data.token);
+            if (response.data.success) {
+              localStorage.setItem('authToken', response.data.token);
+              
+              setStatus('✅ Login Successful! Redirecting...');
+              setShowQR(false);
+              
+              setTimeout(() => {
+                navigate('/dashboard');
+              }, 1500);
+            } else {
+              throw new Error(response.data.message || 'Login failed');
+            }
+          } catch (error) {
+            setLoading(false);
+            console.error('Login error:', error);
             
-            setStatus('✅ Login Successful! Redirecting...');
+            const errorMsg = error.response?.data?.message || 
+                           error.message || 
+                           'Login failed. Please try again.';
+            
+            setStatus('❌ ' + errorMsg);
             setShowQR(false);
             
             setTimeout(() => {
-              navigate('/dashboard');
-            }, 1500);
+              setStatus('');
+              setEmail('');
+              setPassword('');
+            }, 3000);
           }
-        } catch (error) {
+        } else {
+          // Face verification failed
           setLoading(false);
-          const errorMsg = error.response?.data?.message || 'Login failed';
-          setStatus('❌ ' + errorMsg);
+          setStatus('❌ ' + (data.message || 'Face verification failed. Face does not match.'));
           setShowQR(false);
           
-          // Reset after 3 seconds
           setTimeout(() => {
             setStatus('');
           }, 3000);
@@ -56,8 +79,8 @@ function Login() {
       }
     });
 
-    return () => socket.off('face-verified');
-  }, [navigate]);
+    return () => socket.off('face-verification-complete');
+  }, [navigate, sessionId, email, password]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -65,7 +88,6 @@ function Login() {
       return;
     }
 
-    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setStatus('❌ Invalid email format');
@@ -73,72 +95,48 @@ function Login() {
     }
 
     try {
+      setLoading(true);
+      
       // Create session on backend
-      await axios.post(`${config.API_URL}/api/session/create`, {
+      const sessionResponse = await axios.post(`${config.API_URL}/api/session/create`, {
         sessionId,
         email,
         password,
         type: 'login'
       });
 
-      setShowQR(true);
-      setStatus('📱 Scan QR code with mobile to verify face');
-      
-      socket.emit('qr-generated', { 
-        sessionId, 
-        type: 'login' 
-      });
+      if (sessionResponse.data.success) {
+        setShowQR(true);
+        setStatus('📱 Scan QR code with mobile to verify face');
+        setLoading(false);
+        
+        socket.emit('qr-generated', { 
+          sessionId, 
+          type: 'login',
+          email 
+        });
+      }
     } catch (error) {
+      setLoading(false);
+      console.error('Session creation error:', error);
       setStatus('❌ Failed to create session. Please try again.');
     }
   };
 
-  // FIXED: Proper QR data with full URL
   const qrData = `${config.APP_URL}/mobile-verify/${sessionId}`;
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px'
-    }}>
-      <div style={{
-        backgroundColor: 'white',
-        padding: '40px',
-        borderRadius: '20px',
-        boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
-        maxWidth: '500px',
-        width: '100%'
-      }}>
-        <h2 style={{
-          textAlign: 'center',
-          marginBottom: '30px',
-          color: '#333',
-          fontSize: '28px'
-        }}>
-          🔐 Secure Login
-        </h2>
+    <div style={styles.container}>
+      <div style={styles.card}>
+        <h2 style={styles.title}>🔐 Secure Login</h2>
         
         <input
           type="email"
           placeholder="📧 Email Address"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          disabled={loading}
-          style={{
-            width: '100%',
-            padding: '15px',
-            marginBottom: '15px',
-            border: '2px solid #e0e0e0',
-            borderRadius: '10px',
-            fontSize: '16px',
-            outline: 'none',
-            transition: 'border 0.3s',
-            boxSizing: 'border-box'
-          }}
+          disabled={loading || showQR}
+          style={styles.input}
           onFocus={(e) => e.target.style.border = '2px solid #667eea'}
           onBlur={(e) => e.target.style.border = '2px solid #e0e0e0'}
         />
@@ -148,113 +146,63 @@ function Login() {
           placeholder="🔒 Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          disabled={loading}
-          style={{
-            width: '100%',
-            padding: '15px',
-            marginBottom: '20px',
-            border: '2px solid #e0e0e0',
-            borderRadius: '10px',
-            fontSize: '16px',
-            outline: 'none',
-            transition: 'border 0.3s',
-            boxSizing: 'border-box'
-          }}
+          disabled={loading || showQR}
+          style={styles.input}
           onFocus={(e) => e.target.style.border = '2px solid #667eea'}
           onBlur={(e) => e.target.style.border = '2px solid #e0e0e0'}
         />
         
         <button 
           onClick={handleLogin}
-          disabled={loading}
+          disabled={loading || showQR}
           style={{
-            width: '100%',
-            padding: '15px',
-            backgroundColor: loading ? '#ccc' : '#667eea',
-            color: 'white',
-            border: 'none',
-            borderRadius: '10px',
-            fontSize: '18px',
-            fontWeight: 'bold',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            transition: 'background-color 0.3s',
-            boxSizing: 'border-box'
-          }}
-          onMouseOver={(e) => {
-            if (!loading) e.target.style.backgroundColor = '#5568d3';
-          }}
-          onMouseOut={(e) => {
-            if (!loading) e.target.style.backgroundColor = '#667eea';
+            ...styles.button,
+            backgroundColor: (loading || showQR) ? '#ccc' : '#667eea',
+            cursor: (loading || showQR) ? 'not-allowed' : 'pointer'
           }}
         >
           {loading ? '⏳ Processing...' : '🚀 Login with Face Authentication'}
         </button>
 
         {showQR && (
-          <div style={{
-            marginTop: '30px',
-            textAlign: 'center',
-            padding: '20px',
-            backgroundColor: '#f8f9fa',
-            borderRadius: '15px'
-          }}>
+          <div style={styles.qrSection}>
             <QRCodeSVG 
               value={qrData} 
               size={256}
               level="H"
               includeMargin={true}
             />
-            <p style={{
-              marginTop: '15px',
-              fontSize: '16px',
-              color: '#666',
-              fontWeight: '500'
-            }}>
-              📱 Scan with mobile camera
-            </p>
-            <p style={{
-              fontSize: '14px',
-              color: '#999',
-              marginTop: '5px'
-            }}>
-              Open camera app or QR scanner
-            </p>
+            <p style={styles.qrText}>📱 Scan with mobile camera</p>
+            <p style={styles.qrSubtext}>Open camera app or QR scanner</p>
             
-            {/* Manual link for testing */}
-            <div style={{
-              marginTop: '15px',
-              padding: '10px',
-              backgroundColor: '#fff',
-              borderRadius: '8px',
-              border: '1px solid #ddd'
-            }}>
-              <p style={{ fontSize: '12px', color: '#666', marginBottom: '5px' }}>
-                Or click to open directly:
-              </p>
+            <div style={styles.manualLinkBox}>
+              <p style={styles.manualLinkLabel}>Or click to open directly:</p>
               <a 
                 href={qrData}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{
-                  color: '#667eea',
-                  fontSize: '12px',
-                  wordBreak: 'break-all'
-                }}
+                style={styles.manualLink}
               >
-                {qrData}
+                Open on Mobile
               </a>
             </div>
+
+            <button
+              onClick={() => {
+                setShowQR(false);
+                setStatus('');
+                setLoading(false);
+              }}
+              style={styles.cancelButton}
+            >
+              ✕ Cancel
+            </button>
           </div>
         )}
 
         {status && (
           <div style={{
-            marginTop: '20px',
-            padding: '15px',
-            borderRadius: '10px',
-            textAlign: 'center',
-            fontWeight: 'bold',
-            fontSize: '16px',
+            ...styles.statusBox,
             backgroundColor: status.includes('❌') ? '#fee' : 
                            status.includes('✅') ? '#efe' : '#fff3cd',
             color: status.includes('❌') ? '#c00' : 
@@ -266,27 +214,127 @@ function Login() {
           </div>
         )}
 
-        <p style={{
-          marginTop: '20px',
-          textAlign: 'center',
-          color: '#666',
-          fontSize: '14px'
-        }}>
+        <p style={styles.registerLink}>
           Don't have an account? {' '}
-          <a 
-            href="/register" 
-            style={{
-              color: '#667eea',
-              textDecoration: 'none',
-              fontWeight: 'bold'
-            }}
-          >
-            Register here
-          </a>
+          <a href="/register" style={styles.link}>Register here</a>
         </p>
       </div>
     </div>
   );
 }
+
+const styles = {
+  container: {
+    minHeight: '100vh',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '20px'
+  },
+  card: {
+    backgroundColor: 'white',
+    padding: '40px',
+    borderRadius: '20px',
+    boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+    maxWidth: '500px',
+    width: '100%'
+  },
+  title: {
+    textAlign: 'center',
+    marginBottom: '30px',
+    color: '#333',
+    fontSize: '28px'
+  },
+  input: {
+    width: '100%',
+    padding: '15px',
+    marginBottom: '15px',
+    border: '2px solid #e0e0e0',
+    borderRadius: '10px',
+    fontSize: '16px',
+    outline: 'none',
+    transition: 'border 0.3s',
+    boxSizing: 'border-box'
+  },
+  button: {
+    width: '100%',
+    padding: '15px',
+    color: 'white',
+    border: 'none',
+    borderRadius: '10px',
+    fontSize: '18px',
+    fontWeight: 'bold',
+    transition: 'background-color 0.3s',
+    boxSizing: 'border-box',
+    marginBottom: '20px'
+  },
+  qrSection: {
+    marginTop: '30px',
+    textAlign: 'center',
+    padding: '20px',
+    backgroundColor: '#f8f9fa',
+    borderRadius: '15px'
+  },
+  qrText: {
+    marginTop: '15px',
+    fontSize: '16px',
+    color: '#666',
+    fontWeight: '500'
+  },
+  qrSubtext: {
+    fontSize: '14px',
+    color: '#999',
+    marginTop: '5px'
+  },
+  manualLinkBox: {
+    marginTop: '15px',
+    padding: '10px',
+    backgroundColor: '#fff',
+    borderRadius: '8px',
+    border: '1px solid #ddd'
+  },
+  manualLinkLabel: {
+    fontSize: '12px',
+    color: '#666',
+    marginBottom: '5px'
+  },
+  manualLink: {
+    color: '#667eea',
+    fontSize: '14px',
+    textDecoration: 'none',
+    fontWeight: 'bold'
+  },
+  cancelButton: {
+    marginTop: '15px',
+    padding: '10px 20px',
+    backgroundColor: '#dc3545',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 'bold'
+  },
+  statusBox: {
+    marginTop: '20px',
+    padding: '15px',
+    borderRadius: '10px',
+    textAlign: 'center',
+    fontWeight: 'bold',
+    fontSize: '16px'
+  },
+  registerLink: {
+    marginTop: '20px',
+    textAlign: 'center',
+    color: '#666',
+    fontSize: '14px'
+  },
+  link: {
+    color: '#667eea',
+    textDecoration: 'none',
+    fontWeight: 'bold'
+  }
+};
 
 export default Login;
