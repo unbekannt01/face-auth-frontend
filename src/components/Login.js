@@ -29,11 +29,9 @@ function Login() {
           setLoading(true);
 
           try {
-            // FIXED: Using correct backend route
-            const response = await axios.post(`${config.API_URL}/api/auth/verify-login`, {
-              email: email,
-              password: password,
-              faceDescriptor: data.faceDescriptor,
+            // FIXED: Using correct backend endpoint flow
+            // Step 1: Complete the login after face verification
+            const response = await axios.post(`${config.API_URL}/api/auth/login/complete`, {
               sessionId: sessionId
             });
 
@@ -80,7 +78,7 @@ function Login() {
     });
 
     return () => socket.off('face-verification-complete');
-  }, [navigate, sessionId, email, password]);
+  }, [navigate, sessionId]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -96,8 +94,19 @@ function Login() {
 
     try {
       setLoading(true);
+      setStatus('🔄 Initiating login...');
       
-      // Create session on backend
+      // FIXED: Use the correct backend endpoint
+      // Step 1: Initiate login with email (this checks if user exists)
+      const initiateResponse = await axios.post(`${config.API_URL}/api/auth/login/initiate`, {
+        email: email
+      });
+
+      if (!initiateResponse.data.success) {
+        throw new Error('Failed to initiate login');
+      }
+
+      // Step 2: Create session for QR code
       const sessionResponse = await axios.post(`${config.API_URL}/api/session/create`, {
         sessionId,
         email,
@@ -118,8 +127,9 @@ function Login() {
       }
     } catch (error) {
       setLoading(false);
-      console.error('Session creation error:', error);
-      setStatus('❌ Failed to create session. Please try again.');
+      console.error('Login initiation error:', error);
+      const errorMsg = error.response?.data?.message || 'Failed to initiate login. Please check your email.';
+      setStatus('❌ ' + errorMsg);
     }
   };
 
