@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 // src/components/MobileVerify.jsx
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import * as faceapi from 'face-api.js';
 import io from 'socket.io-client';
 import axios from 'axios';
@@ -11,12 +11,15 @@ let socket = null;
 
 function MobileVerify() {
   const { sessionId } = useParams();
+  const navigate = useNavigate();
   const videoRef = useRef(null);
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [status, setStatus] = useState('🔄 Loading session...');
   const [sessionData, setSessionData] = useState(null);
   const [capturing, setCapturing] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
+  const [facingMode, setFacingMode] = useState('user'); // 'user' = front, 'environment' = back
+  const [faceDetected, setFaceDetected] = useState(false);
 
   const fetchSessionData = useCallback(async () => {
     try {
@@ -42,34 +45,18 @@ function MobileVerify() {
     try {
       setStatus('📦 Loading AI models... (this may take a moment)');
       
-      // FIXED: Use CDN for models instead of local path
+      // Use CDN for models
       const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
       
       console.log('📍 Loading models from CDN:', MODEL_URL);
 
-      // Load models one by one with better error handling
-      await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL)
-        .catch(err => {
-          console.error('❌ SSD MobileNet loading failed:', err);
-          throw new Error('Failed to load face detection model');
-        });
-      
+      await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
       console.log('✅ Face detection model loaded');
 
-      await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL)
-        .catch(err => {
-          console.error('❌ Face Landmark loading failed:', err);
-          throw new Error('Failed to load landmark model');
-        });
-      
+      await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
       console.log('✅ Landmark model loaded');
 
-      await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-        .catch(err => {
-          console.error('❌ Face Recognition loading failed:', err);
-          throw new Error('Failed to load recognition model');
-        });
-      
+      await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
       console.log('✅ Recognition model loaded');
       
       setModelsLoaded(true);
@@ -84,9 +71,14 @@ function MobileVerify() {
 
   const startCamera = async () => {
     try {
+      // Stop existing stream if any
+      if (videoRef.current && videoRef.current.srcObject) {
+        videoRef.current.srcObject.getTracks().forEach(track => track.stop());
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
-          facingMode: 'user',
+          facingMode: facingMode,
           width: { ideal: 1280 },
           height: { ideal: 720 }
         } 
@@ -98,12 +90,48 @@ function MobileVerify() {
           videoRef.current.play();
           setVideoReady(true);
           setStatus('✅ Ready! Position your face and tap "Capture"');
+          startFaceDetection();
         };
       }
     } catch (error) {
       setStatus('❌ Camera access denied. Please allow camera permissions.');
       console.error('Camera error:', error);
     }
+  };
+
+  const switchCamera = async () => {
+    const newFacingMode = facingMode === 'user' ? 'environment' : 'user';
+    setFacingMode(newFacingMode);
+    setVideoReady(false);
+    setFaceDetected(false);
+    setStatus('📸 Switching camera...');
+    
+    // Restart camera with new facing mode
+    await startCamera();
+  };
+
+  // Real-time face detection
+  const startFaceDetection = () => {
+    const detectFace = async () => {
+      if (videoRef.current && videoReady && !capturing) {
+        try {
+          const detection = await faceapi
+            .detectSingleFace(videoRef.current)
+            .withFaceLandmarks();
+
+          setFaceDetected(!!detection);
+        } catch (error) {
+          // Ignore detection errors during continuous detection
+        }
+      }
+      
+      // Continue detection loop
+      if (videoReady && !capturing) {
+        requestAnimationFrame(detectFace);
+      }
+    };
+    
+    detectFace();
   };
 
   useEffect(() => {
@@ -140,7 +168,7 @@ function MobileVerify() {
       if (detections) {
         const faceDescriptor = Array.from(detections.descriptor);
         
-        setStatus('✅ Face captured! Sending data...');
+        setStatus('✅ Face captured! Verifying...');
 
         if (socket) {
           socket.emit('face-captured', {
@@ -151,13 +179,16 @@ function MobileVerify() {
           });
         }
 
+        // Stop camera
         if (videoRef.current && videoRef.current.srcObject) {
           videoRef.current.srcObject.getTracks().forEach(track => track.stop());
         }
 
+        // Redirect to success page after 2 seconds
         setTimeout(() => {
-          setStatus('✅ Success! Return to your computer.');
-        }, 500);
+          setStatus('✅ Verification successful!');
+          navigate('/verification-success');
+        }, 2000);
 
       } else {
         setStatus('❌ No face detected. Please try again.');
@@ -189,19 +220,44 @@ function MobileVerify() {
             style={styles.video}
           />
           <div style={styles.overlay}>
-            <div style={styles.faceGuide}>
+            <div style={{
+              ...styles.faceGuide,
+              borderColor: faceDetected ? '#4CAF50' : '#667eea',
+              boxShadow: faceDetected ? '0 0 40px rgba(76, 175, 80, 0.6)' : '0 0 40px rgba(102, 126, 234, 0.6)'
+            }}>
               <div style={styles.guideLine} />
             </div>
           </div>
+          
+          {/* Camera switch button */}
+          {videoReady && (
+            <button
+              onClick={switchCamera}
+              style={styles.cameraSwitchBtn}
+              disabled={capturing}
+            >
+              🔄 Switch Camera
+            </button>
+          )}
+          
+          {/* Face detection indicator */}
+          {videoReady && (
+            <div style={{
+              ...styles.detectionIndicator,
+              backgroundColor: faceDetected ? '#4CAF50' : '#ff9800'
+            }}>
+              {faceDetected ? '✓ Face Detected' : '⚠ Position Your Face'}
+            </div>
+          )}
         </div>
 
         <button 
           onClick={captureFace}
-          disabled={!videoReady || capturing}
+          disabled={!videoReady || capturing || !faceDetected}
           style={{
             ...styles.button,
-            backgroundColor: !videoReady || capturing ? '#94a3b8' : '#667eea',
-            cursor: !videoReady || capturing ? 'not-allowed' : 'pointer'
+            backgroundColor: !videoReady || capturing || !faceDetected ? '#94a3b8' : '#667eea',
+            cursor: !videoReady || capturing || !faceDetected ? 'not-allowed' : 'pointer'
           }}
         >
           {capturing ? '⏳ Processing...' : '📸 Capture Face'}
@@ -233,6 +289,7 @@ function MobileVerify() {
             <li>👤 Face camera directly</li>
             <li>😐 Neutral expression</li>
             <li>📏 Stay in frame</li>
+            <li>🔄 Use camera switch if needed</li>
           </ul>
         </div>
       </div>
@@ -304,7 +361,8 @@ const styles = {
     border: '4px solid #667eea',
     borderRadius: '50%',
     boxShadow: '0 0 40px rgba(102, 126, 234, 0.6)',
-    animation: 'pulse 2s ease-in-out infinite'
+    animation: 'pulse 2s ease-in-out infinite',
+    transition: 'all 0.3s ease'
   },
   guideLine: {
     position: 'absolute',
@@ -315,6 +373,33 @@ const styles = {
     backgroundColor: '#667eea',
     boxShadow: '0 0 10px rgba(102, 126, 234, 0.8)',
     transform: 'translateY(-50%)'
+  },
+  cameraSwitchBtn: {
+    position: 'absolute',
+    top: '15px',
+    right: '15px',
+    padding: '10px 15px',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    border: 'none',
+    borderRadius: '20px',
+    fontSize: '14px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+    zIndex: 10
+  },
+  detectionIndicator: {
+    position: 'absolute',
+    bottom: '15px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    padding: '8px 16px',
+    borderRadius: '20px',
+    fontSize: '13px',
+    fontWeight: 'bold',
+    color: 'white',
+    zIndex: 10,
+    transition: 'background-color 0.3s ease'
   },
   button: {
     width: '100%',

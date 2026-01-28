@@ -59,7 +59,7 @@ function Login() {
     return () => socket.off('face-verified');
   }, [navigate]);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email || !password) {
       setStatus('❌ Please fill all fields');
       return;
@@ -72,22 +72,29 @@ function Login() {
       return;
     }
 
-    setShowQR(true);
-    setStatus('📱 Scan QR code with mobile to verify face');
-    
-    socket.emit('qr-generated', { 
-      sessionId, 
-      type: 'login' 
-    });
+    try {
+      // Create session on backend
+      await axios.post(`${config.API_URL}/api/session/create`, {
+        sessionId,
+        email,
+        password,
+        type: 'login'
+      });
+
+      setShowQR(true);
+      setStatus('📱 Scan QR code with mobile to verify face');
+      
+      socket.emit('qr-generated', { 
+        sessionId, 
+        type: 'login' 
+      });
+    } catch (error) {
+      setStatus('❌ Failed to create session. Please try again.');
+    }
   };
 
-  const qrData = JSON.stringify({
-    sessionId,
-    type: 'login',
-    email,
-    password,
-    url: `${config.APP_URL}/mobile-verify`
-  });
+  // FIXED: Proper QR data with full URL
+  const qrData = `${config.APP_URL}/mobile-verify/${sessionId}`;
 
   return (
     <div style={{
@@ -192,11 +199,11 @@ function Login() {
             borderRadius: '15px'
           }}>
             <QRCodeSVG 
-  value={qrData} 
-  size={256}
-  level="H"
-  includeMargin={true}
-/>
+              value={qrData} 
+              size={256}
+              level="H"
+              includeMargin={true}
+            />
             <p style={{
               marginTop: '15px',
               fontSize: '16px',
@@ -212,6 +219,31 @@ function Login() {
             }}>
               Open camera app or QR scanner
             </p>
+            
+            {/* Manual link for testing */}
+            <div style={{
+              marginTop: '15px',
+              padding: '10px',
+              backgroundColor: '#fff',
+              borderRadius: '8px',
+              border: '1px solid #ddd'
+            }}>
+              <p style={{ fontSize: '12px', color: '#666', marginBottom: '5px' }}>
+                Or click to open directly:
+              </p>
+              <a 
+                href={qrData}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  color: '#667eea',
+                  fontSize: '12px',
+                  wordBreak: 'break-all'
+                }}
+              >
+                {qrData}
+              </a>
+            </div>
           </div>
         )}
 

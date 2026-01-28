@@ -140,6 +140,7 @@ function Register() {
     }
   };
 
+  // FIXED: Proper QR data with full URL
   const qrData = `${config.APP_URL}/mobile-verify/${sessionId}`;
 
   return (
