@@ -29,8 +29,9 @@ function Login() {
           setLoading(true);
 
           try {
-            // FIXED: Using correct backend endpoint flow
-            // Step 1: Complete the login after face verification
+            // FIXED: Use the CORRECT backend endpoint that EXISTS
+            // Original code tried to use /api/auth/verify-login which doesn't exist
+            // The correct endpoint is /api/auth/login/complete
             const response = await axios.post(`${config.API_URL}/api/auth/login/complete`, {
               sessionId: sessionId
             });
@@ -94,19 +95,8 @@ function Login() {
 
     try {
       setLoading(true);
-      setStatus('🔄 Initiating login...');
       
-      // FIXED: Use the correct backend endpoint
-      // Step 1: Initiate login with email (this checks if user exists)
-      const initiateResponse = await axios.post(`${config.API_URL}/api/auth/login/initiate`, {
-        email: email
-      });
-
-      if (!initiateResponse.data.success) {
-        throw new Error('Failed to initiate login');
-      }
-
-      // Step 2: Create session for QR code
+      // Create session on backend (SAME AS BEFORE)
       const sessionResponse = await axios.post(`${config.API_URL}/api/session/create`, {
         sessionId,
         email,
@@ -115,6 +105,7 @@ function Login() {
       });
 
       if (sessionResponse.data.success) {
+        // SHOW QR CODE (PEHLE WALA FLOW)
         setShowQR(true);
         setStatus('📱 Scan QR code with mobile to verify face');
         setLoading(false);
@@ -127,9 +118,8 @@ function Login() {
       }
     } catch (error) {
       setLoading(false);
-      console.error('Login initiation error:', error);
-      const errorMsg = error.response?.data?.message || 'Failed to initiate login. Please check your email.';
-      setStatus('❌ ' + errorMsg);
+      console.error('Session creation error:', error);
+      setStatus('❌ Failed to create session. Please try again.');
     }
   };
 
@@ -174,6 +164,7 @@ function Login() {
           {loading ? '⏳ Processing...' : '🚀 Login with Face Authentication'}
         </button>
 
+        {/* QR CODE SECTION - PEHLE WALA */}
         {showQR && (
           <div style={styles.qrSection}>
             <QRCodeSVG 
