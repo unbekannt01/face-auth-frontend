@@ -42,7 +42,7 @@ function MobileVerify() {
     try {
       setStatus('📦 Loading AI models... (this may take a moment)');
       
-      const MODEL_URL = `${window.location.origin}/models`;
+      const MODEL_URL = `${window.location.origin}/public/models`;
       
       console.log('📍 Loading models from:', MODEL_URL);
 
