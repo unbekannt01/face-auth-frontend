@@ -42,9 +42,10 @@ function MobileVerify() {
     try {
       setStatus('📦 Loading AI models... (this may take a moment)');
       
-      const MODEL_URL = `${window.location.origin}/public/models`;
+      // FIXED: Use CDN for models instead of local path
+      const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
       
-      console.log('📍 Loading models from:', MODEL_URL);
+      console.log('📍 Loading models from CDN:', MODEL_URL);
 
       // Load models one by one with better error handling
       await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL)

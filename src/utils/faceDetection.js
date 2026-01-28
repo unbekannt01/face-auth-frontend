@@ -6,13 +6,16 @@ class FaceDetectionService {
     this.isModelsLoaded = false;
   }
 
-  // Load face-api.js models
+  // Load face-api.js models from CDN
   async loadModels() {
     if (this.isModelsLoaded) return;
 
-    const MODEL_URL = process.env.PUBLIC_URL + '/models';
+    // FIXED: Use CDN instead of local path
+    const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
     
     try {
+      console.log('Loading models from CDN:', MODEL_URL);
+      
       await Promise.all([
         faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
         faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
