@@ -29,14 +29,13 @@ function Login() {
           setLoading(true);
 
           try {
-            // Wait a moment for server to update session status
-            await new Promise(resolve => setTimeout(resolve, 500));
+            // Wait a bit longer for server to update session status (increased from 500ms to 1.5s)
+            console.log('[v0] Waiting for server session update...');
+            await new Promise(resolve => setTimeout(resolve, 1500));
             
             console.log('[v0] Completing login for session:', sessionId);
             
             // FIXED: Use the CORRECT backend endpoint that EXISTS
-            // Original code tried to use /api/auth/verify-login which doesn't exist
-            // The correct endpoint is /api/auth/login/complete
             const response = await axios.post(`${config.API_URL}/api/auth/login/complete`, {
               sessionId: sessionId
             });
@@ -44,20 +43,28 @@ function Login() {
             console.log('[v0] Login complete response:', response.data);
 
             if (response.data.success) {
+              console.log('[v0] Token received:', response.data.token.substring(0, 20) + '...');
               localStorage.setItem('authToken', response.data.token);
+              localStorage.setItem('user', JSON.stringify(response.data.user));
               
               setStatus('✅ Login Successful! Redirecting...');
               setShowQR(false);
               
-              setTimeout(() => {
-                navigate('/dashboard');
-              }, 1500);
+              // Longer delay to ensure state updates
+              await new Promise(resolve => setTimeout(resolve, 800));
+              console.log('[v0] Navigating to dashboard...');
+              navigate('/dashboard');
             } else {
               throw new Error(response.data.message || 'Login failed');
             }
           } catch (error) {
             setLoading(false);
-            console.error('[v0] Login error:', error);
+            console.error('[v0] Login error details:', {
+              status: error.response?.status,
+              statusText: error.response?.statusText,
+              message: error.response?.data?.message,
+              errorMsg: error.message
+            });
             
             const errorMsg = error.response?.data?.message || 
                            error.message || 
@@ -70,7 +77,7 @@ function Login() {
               setStatus('');
               setEmail('');
               setPassword('');
-            }, 3000);
+            }, 4000);
           }
         } else {
           // Face verification failed
