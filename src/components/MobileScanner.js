@@ -1,14 +1,21 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 // frontend/src/components/MobileScanner.jsx
+
 import React, { useEffect, useRef, useState } from 'react';
 import jsQR from 'jsqr';
 
 function MobileScanner() {
-  const videoRef = useRef();
-  const canvasRef = useRef();
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+
   const [scanning, setScanning] = useState(false);
-  const [status, setStatus] = useState('Position QR code in camera');
   const [cameraActive, setCameraActive] = useState(false);
+  const [status, setStatus] = useState('Position QR code in camera');
+
+  const handleClose = () => {
+    stopCamera();
+    window.history.back();
+  };
 
   useEffect(() => {
     startCamera();
@@ -18,36 +25,27 @@ function MobileScanner() {
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: { ideal: 'environment' }, // Back camera with fallback
+        video: {
+          facingMode: { ideal: 'environment' },
           width: { ideal: 1280 },
           height: { ideal: 720 }
         }
       });
-      
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.setAttribute('playsinline', 'true');
-        
-        // Wait for video to be ready before scanning
-        const handleCanPlay = () => {
-          console.log('[v0] Video ready, starting scan');
+
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current.play();
           setCameraActive(true);
-          setStatus('📷 Camera ready! Scan QR code');
-          videoRef.current.removeEventListener('canplay', handleCanPlay);
+          setStatus('Camera ready. Scan QR code');
           requestAnimationFrame(scanQRCode);
         };
-        
-        videoRef.current.addEventListener('canplay', handleCanPlay);
-        
-        videoRef.current.play().catch(err => {
-          console.error('Play error:', err);
-          setStatus('❌ Failed to start camera');
-        });
       }
-    } catch (error) {
-      console.error('Camera error:', error);
-      setStatus('❌ Camera access denied. Please allow camera permissions.');
+    } catch (err) {
+      console.error('Camera error:', err);
+      setStatus('Camera access denied. Please allow permissions.');
     }
   };
 
@@ -58,61 +56,51 @@ function MobileScanner() {
   };
 
   const scanQRCode = () => {
-    if (!scanning && videoRef.current && canvasRef.current && cameraActive) {
-      const canvas = canvasRef.current;
-      const video = videoRef.current;
-      
-      if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        canvas.height = video.videoHeight;
-        canvas.width = video.videoWidth;
-        
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height, {
-          inversionAttempts: 'dontInvert',
-        });
+    if (!cameraActive || scanning) return;
 
-        if (code) {
-          setScanning(true);
-          setStatus('✅ QR Code detected! Redirecting...');
-          handleQRData(code.data);
-          return;
-        }
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    if (!video || !canvas) return;
+
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+      const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+      if (code?.data) {
+        setScanning(true);
+        setStatus('QR detected. Redirecting...');
+        handleQRData(code.data);
+        return;
       }
-      
-      requestAnimationFrame(scanQRCode);
     }
+
+    requestAnimationFrame(scanQRCode);
   };
 
   const handleQRData = (qrDataString) => {
     try {
       const qrData = JSON.parse(qrDataString);
-      
-      // Validate QR data
+
       if (!qrData.sessionId || !qrData.type || !qrData.url) {
-        setStatus('❌ Invalid QR code');
-        setTimeout(() => {
-          setScanning(false);
-          setStatus('Position QR code in camera');
-        }, 2000);
-        return;
+        throw new Error('Invalid QR payload');
       }
 
-      // Stop camera
       stopCamera();
 
-      // Redirect to mobile verification page with data
-      const params = new URLSearchParams({
-        data: encodeURIComponent(JSON.stringify(qrData))
-      });
-      
-      window.location.href = `/mobile-verify?${params.toString()}`;
-      
-    } catch (error) {
-      console.error('QR Parse error:', error);
-      setStatus('❌ Invalid QR code format');
+      window.location.href = `/mobile-verify/${qrData.sessionId}`;
+
+    } catch (err) {
+      console.error('QR parse error:', err);
+      setStatus('Invalid QR Code');
+
       setTimeout(() => {
         setScanning(false);
         setStatus('Position QR code in camera');
@@ -121,131 +109,101 @@ function MobileScanner() {
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      backgroundColor: '#1a1a1a',
-      color: 'white',
-      padding: '20px',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center'
-    }}>
-      <h2 style={{ marginBottom: '20px' }}>📱 QR Code Scanner</h2>
-      
-      <div style={{
-        position: 'relative',
-        width: '100%',
-        maxWidth: '500px',
-        borderRadius: '15px',
-        overflow: 'hidden',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.5)'
-      }}>
-        <video
-          ref={videoRef}
-          style={{
-            width: '100%',
-            height: 'auto',
-            display: 'block'
-          }}
-        />
-        
-        {/* QR Scanner overlay */}
-        <div style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: '250px',
-          height: '250px',
-          border: '3px solid #4CAF50',
-          borderRadius: '15px',
-          pointerEvents: 'none'
-        }}>
-          {/* Corner markers */}
-          <div style={{
-            position: 'absolute',
-            top: '-3px',
-            left: '-3px',
-            width: '30px',
-            height: '30px',
-            borderTop: '6px solid #4CAF50',
-            borderLeft: '6px solid #4CAF50',
-            borderRadius: '5px 0 0 0'
-          }} />
-          <div style={{
-            position: 'absolute',
-            top: '-3px',
-            right: '-3px',
-            width: '30px',
-            height: '30px',
-            borderTop: '6px solid #4CAF50',
-            borderRight: '6px solid #4CAF50',
-            borderRadius: '0 5px 0 0'
-          }} />
-          <div style={{
-            position: 'absolute',
-            bottom: '-3px',
-            left: '-3px',
-            width: '30px',
-            height: '30px',
-            borderBottom: '6px solid #4CAF50',
-            borderLeft: '6px solid #4CAF50',
-            borderRadius: '0 0 0 5px'
-          }} />
-          <div style={{
-            position: 'absolute',
-            bottom: '-3px',
-            right: '-3px',
-            width: '30px',
-            height: '30px',
-            borderBottom: '6px solid #4CAF50',
-            borderRight: '6px solid #4CAF50',
-            borderRadius: '0 0 5px 0'
-          }} />
-        </div>
+    <div style={styles.wrapper}>
+      <div style={styles.header}>
+        <h2 style={styles.heading}>QR Code Scanner</h2>
+        <button onClick={handleClose} style={styles.closeBtn}>×</button>
+      </div>
+
+      <div style={styles.cameraBox}>
+        <video ref={videoRef} style={styles.video} />
+        <div style={styles.scanBox}></div>
       </div>
 
       <canvas ref={canvasRef} style={{ display: 'none' }} />
 
       <p style={{
-        marginTop: '30px',
-        fontSize: '18px',
-        fontWeight: 'bold',
-        textAlign: 'center',
-        padding: '15px',
-        backgroundColor: scanning ? '#4CAF50' : '#333',
-        borderRadius: '10px',
-        minWidth: '300px'
+        ...styles.status,
+        backgroundColor: scanning ? '#4caf50' : '#333'
       }}>
         {status}
       </p>
 
-      <div style={{
-        marginTop: '20px',
-        padding: '15px',
-        backgroundColor: '#2a2a2a',
-        borderRadius: '10px',
-        textAlign: 'center',
-        maxWidth: '400px'
-      }}>
-        <p style={{ fontSize: '14px', color: '#aaa' }}>
-          💡 <strong>Instructions:</strong>
-        </p>
-        <ul style={{ 
-          textAlign: 'left', 
-          fontSize: '13px', 
-          color: '#ccc',
-          marginTop: '10px' 
-        }}>
-          <li>Allow camera access when prompted</li>
-          <li>Point camera at the QR code on screen</li>
-          <li>Hold steady for 2-3 seconds</li>
-          <li>Auto-redirect when detected</li>
+      <div style={styles.helpBox}>
+        <strong>Instructions:</strong>
+        <ul>
+          <li>Allow camera access</li>
+          <li>Point camera at QR code</li>
+          <li>Hold steady</li>
+          <li>Auto redirect on scan</li>
         </ul>
       </div>
     </div>
   );
 }
+
+const styles = {
+  wrapper: {
+    minHeight: '100vh',
+    background: '#111',
+    color: '#fff',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20
+  },
+  header: {
+    display: 'flex',
+    width: '100%',
+    maxWidth: 500,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 15
+  },
+  heading: { margin: 0 },
+  closeBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: '50%',
+    border: '2px solid #fff',
+    background: 'transparent',
+    color: '#fff',
+    fontSize: 24,
+    cursor: 'pointer'
+  },
+  cameraBox: {
+    width: '100%',
+    maxWidth: 500,
+    position: 'relative',
+    borderRadius: 12,
+    overflow: 'hidden',
+    boxShadow: '0 0 15px rgba(0,0,0,0.6)'
+  },
+  video: { width: '100%' },
+  scanBox: {
+    position: 'absolute',
+    inset: 40,
+    border: '3px solid #4caf50',
+    borderRadius: 12,
+    pointerEvents: 'none'
+  },
+  status: {
+    marginTop: 25,
+    padding: 12,
+    borderRadius: 8,
+    minWidth: 280,
+    textAlign: 'center',
+    fontWeight: 'bold'
+  },
+  helpBox: {
+    marginTop: 15,
+    padding: 12,
+    background: '#222',
+    borderRadius: 8,
+    maxWidth: 400,
+    fontSize: 13
+  }
+};
 
 export default MobileScanner;
