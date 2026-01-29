@@ -60,7 +60,7 @@ function Dashboard() {
         boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
       }}>
         <h1 style={{ color: '#333', marginBottom: '30px' }}>
-          🎉 Welcome to Dashboard!
+           Welcome to Dashboard!
         </h1>
         
         <div style={{

@@ -44,7 +44,7 @@ function Register() {
       });
 
       if (response.data.success) {
-        setSuccess('✅ Registration Successful! Redirecting...');
+        setSuccess(' Registration Successful! Redirecting...');
         setLoading(false);
         
         setTimeout(() => {
@@ -65,7 +65,7 @@ function Register() {
     socket.on('face-verified', async (data) => {
       if (data.success && data.faceDescriptor) {
         setFaceDescriptor(data.faceDescriptor);
-        setSuccess('✅ Face captured successfully!');
+        setSuccess(' Face captured successfully!');
         setShowQR(false);
         
         setTimeout(() => {
@@ -126,7 +126,7 @@ function Register() {
 
       setStep(2);
       setShowQR(true);
-      setSuccess('📱 Scan QR code with your mobile camera');
+      setSuccess(' Scan QR code with your mobile camera');
       
       if (socket) {
         socket.emit('qr-generated', { 
@@ -144,7 +144,7 @@ function Register() {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <h1 style={styles.title}>🔐 Secure Registration</h1>
+        <h1 style={styles.title}> Secure Registration</h1>
         
         {step === 1 && (
           <form onSubmit={handleNextStep} style={styles.form}>
@@ -195,7 +195,7 @@ function Register() {
             {error && <p style={styles.error}>{error}</p>}
             
             <button type="submit" style={styles.button}>
-              Next: Capture Face 📸
+              Next: Capture Face 
             </button>
 
             <p style={styles.loginLink}>
@@ -219,7 +219,7 @@ function Register() {
             <p style={styles.stepTitle}>Step 2: Face Verification</p>
             
             <div style={styles.qrInfo}>
-              <p style={styles.qrMainText}>📱 Scan with Mobile Camera</p>
+              <p style={styles.qrMainText}> Scan with Mobile Camera</p>
               <p style={styles.qrSubText}>Open your camera app and point at the QR code</p>
             </div>
             

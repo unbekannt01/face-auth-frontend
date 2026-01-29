@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable react-hooks/exhaustive-deps */
 // src/components/MobileVerify.js
-// 🔥 FINAL FIX - GREEN DOTS GUARANTEED! 🔥
+//  FINAL FIX - GREEN DOTS GUARANTEED! 
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -20,10 +20,10 @@ function MobileVerify() {
   const streamRef = useRef(null);
   const detectionIntervalRef = useRef(null);
   const isDetectingRef = useRef(false);
-  const videoReadyFiredRef = useRef(false); // 🔥 PREVENT MULTIPLE CALLS
+  const videoReadyFiredRef = useRef(false); //  PREVENT MULTIPLE CALLS
 
   const [modelsLoaded, setModelsLoaded] = useState(false);
-  const [status, setStatus] = useState('🔄 Initializing...');
+  const [status, setStatus] = useState(' Initializing...');
   const [sessionData, setSessionData] = useState(null);
   const [capturing, setCapturing] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
@@ -59,28 +59,28 @@ function MobileVerify() {
 
   const fetchSessionData = useCallback(async () => {
     try {
-      setStatus('📥 Loading session...');
+      setStatus(' Loading session...');
       const response = await axios.get(`${config.API_URL}/api/session/${sessionId}`);
       
       if (response.data.success) {
-        console.log('[SESSION] ✅ Loaded');
+        console.log('[SESSION]  Loaded');
         setSessionData({
           sessionId,
           ...response.data.data
         });
         loadModels();
       } else {
-        setStatus('❌ Session expired');
+        setStatus(' Session expired');
       }
     } catch (error) {
       console.error('[SESSION] Error:', error);
-      setStatus('❌ Failed to load session');
+      setStatus(' Failed to load session');
     }
   }, [sessionId]);
 
   const loadModels = async () => {
     try {
-      setStatus('📦 Loading AI models...');
+      setStatus(' Loading AI models...');
       console.log('[MODELS] Loading...');
       
       const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
@@ -91,13 +91,13 @@ function MobileVerify() {
         faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
       ]);
       
-      console.log('[MODELS] ✅ LOADED');
+      console.log('[MODELS]  LOADED');
       setModelsLoaded(true);
       startCamera();
       
     } catch (error) {
       console.error('[MODELS] Failed:', error);
-      setStatus('❌ Failed to load AI');
+      setStatus(' Failed to load AI');
     }
   };
 
@@ -106,7 +106,7 @@ function MobileVerify() {
       cleanup();
       
       console.log('[CAMERA] Starting...');
-      setStatus('📸 Starting camera...');
+      setStatus(' Starting camera...');
 
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -116,7 +116,7 @@ function MobileVerify() {
         }
       });
       
-      console.log('[CAMERA] ✅ Stream ready');
+      console.log('[CAMERA]  Stream ready');
       streamRef.current = stream;
 
       if (!videoRef.current) return;
@@ -125,16 +125,16 @@ function MobileVerify() {
       videoRef.current.setAttribute('playsinline', 'true');
       videoRef.current.muted = true;
       
-      // 🔥 FIX: USE ONLY ONE EVENT LISTENER
+      //  FIX: USE ONLY ONE EVENT LISTENER
       videoRef.current.onloadedmetadata = async () => {
-        // 🔥 PREVENT MULTIPLE CALLS
+        //  PREVENT MULTIPLE CALLS
         if (videoReadyFiredRef.current) {
           console.log('[VIDEO] Already initialized, skipping...');
           return;
         }
         videoReadyFiredRef.current = true;
         
-        console.log('[VIDEO] ✅ Metadata loaded (ONCE)');
+        console.log('[VIDEO]  Metadata loaded (ONCE)');
         
         // Set canvas size
         if (canvasRef.current && videoRef.current) {
@@ -148,15 +148,15 @@ function MobileVerify() {
         // Play video
         try {
           await videoRef.current.play();
-          console.log('[VIDEO] ✅ Playing');
+          console.log('[VIDEO]  Playing');
         } catch (err) {
           console.error('[VIDEO] Play error:', err);
         }
         
-        // 🔥 Wait for video to fully stabilize
-        console.log('[VIDEO] ⏳ Waiting 2 seconds...');
+        //  Wait for video to fully stabilize
+        console.log('[VIDEO]  Waiting 2 seconds...');
         await new Promise(resolve => setTimeout(resolve, 2000));
-        console.log('[VIDEO] ✅ READY');
+        console.log('[VIDEO]  READY');
         
         setVideoReady(true);
         setStatus('✨ Position your face');
@@ -167,13 +167,13 @@ function MobileVerify() {
 
     } catch (error) {
       console.error('[CAMERA] Error:', error);
-      setStatus('❌ Camera denied');
+      setStatus(' Camera denied');
     }
   };
 
   const startDetection = () => {
     if (isDetectingRef.current) {
-      console.log('[DETECTION] ⚠️ Already running');
+      console.log('[DETECTION]  Already running');
       return;
     }
 
@@ -188,14 +188,14 @@ function MobileVerify() {
       
       // Check refs exist
       if (!videoRef.current || !canvasRef.current) {
-        console.log('[DETECTION] ⚠️ Missing refs');
+        console.log('[DETECTION]  Missing refs');
         return;
       }
 
       // Check video is ready
       if (videoRef.current.readyState < 2) {
         if (frameCount === 0) {
-          console.log('[DETECTION] ⏳ Waiting for video ready...');
+          console.log('[DETECTION]  Waiting for video ready...');
         }
         frameCount++;
         return;
@@ -215,13 +215,13 @@ function MobileVerify() {
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         
-        // 🔥 CRITICAL: Always clear canvas FIRST
+        //  CRITICAL: Always clear canvas FIRST
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         if (detection) {
           // Log first detection
           if (!faceDetected) {
-            console.log('🎉🎉🎉 FIRST FACE DETECTED! 🎉🎉🎉');
+            console.log(' FIRST FACE DETECTED! ');
           }
           
           // Log every 30 frames
@@ -236,12 +236,12 @@ function MobileVerify() {
           const box = detection.detection.box;
           const confidence = Math.round(detection.detection.score * 100);
           
-          // 🔥 DRAW GREEN BOX (THICK & BRIGHT)
+          //  DRAW GREEN BOX (THICK & BRIGHT)
           ctx.strokeStyle = '#00ff00';
           ctx.lineWidth = 5;
           ctx.strokeRect(box.x, box.y, box.width, box.height);
           
-          // 🔥 DRAW BIG CORNER BRACKETS
+          //  DRAW BIG CORNER BRACKETS
           const cornerLen = 35;
           ctx.lineWidth = 7;
           ctx.strokeStyle = '#00ff00';
@@ -274,7 +274,7 @@ function MobileVerify() {
           ctx.lineTo(box.x + box.width, box.y + box.height - cornerLen);
           ctx.stroke();
           
-          // 🔥🔥🔥 DRAW BRIGHT GREEN LANDMARKS (BIG DOTS) 🔥🔥🔥
+          //  DRAW BRIGHT GREEN LANDMARKS (BIG DOTS) 
           if (detection.landmarks) {
             console.log('[DRAW] Drawing', detection.landmarks.positions.length, 'landmarks');
             
@@ -284,7 +284,7 @@ function MobileVerify() {
             
             detection.landmarks.positions.forEach((point, idx) => {
               ctx.beginPath();
-              ctx.arc(point.x, point.y, 4, 0, 2 * Math.PI); // 🔥 BIG DOTS: 4px radius
+              ctx.arc(point.x, point.y, 4, 0, 2 * Math.PI); //  BIG DOTS: 4px radius
               ctx.fill();
               
               // Log first few landmarks
@@ -307,7 +307,7 @@ function MobileVerify() {
         } else {
           // No face
           if (faceDetected) {
-            console.log('[DETECTION] ⚠️ Face lost');
+            console.log('[DETECTION]  Face lost');
           }
           setFaceDetected(false);
           setCurrentDetection(null);
@@ -330,7 +330,7 @@ function MobileVerify() {
     
     cleanup();
     
-    setStatus('🔄 Switching...');
+    setStatus(' Switching...');
     await new Promise(r => setTimeout(r, 300));
     
     await startCamera();
@@ -340,7 +340,7 @@ function MobileVerify() {
     if (!currentDetection || capturing) return;
 
     setCapturing(true);
-    setStatus('📸 Capturing...');
+    setStatus(' Capturing...');
     console.log('[CAPTURE] Sending...');
 
     try {
@@ -355,7 +355,7 @@ function MobileVerify() {
       });
 
       cleanup();
-      setStatus('⏳ Verifying...');
+      setStatus(' Verifying...');
 
       setTimeout(() => {
         navigate('/verification-success?type=' + sessionData.type);
@@ -364,7 +364,7 @@ function MobileVerify() {
     } catch (err) {
       console.error('[CAPTURE] Error:', err);
       setCapturing(false);
-      setStatus('❌ Failed');
+      setStatus(' Failed');
     }
   };
 
@@ -390,12 +390,12 @@ function MobileVerify() {
       <div style={styles.card}>
         <div style={styles.header}>
           <div>
-            <h1 style={styles.title}>📱 Face Verification</h1>
+            <h1 style={styles.title}> Face Verification</h1>
             <p style={styles.subtitle}>
-              {sessionData?.type === 'register' ? '🔐 Registration' : '🔑 Login'}
+              {sessionData?.type === 'register' ? ' Registration' : ' Login'}
             </p>
           </div>
-          <button onClick={handleClose} style={styles.closeBtn}>✕</button>
+          <button onClick={handleClose} style={styles.closeBtn}></button>
         </div>
 
         <div style={styles.videoBox}>
@@ -421,7 +421,7 @@ function MobileVerify() {
 
           {videoReady && (
             <button onClick={switchCamera} style={styles.switchBtn}>
-              🔄 {facingMode === 'user' ? 'Back' : 'Front'}
+               {facingMode === 'user' ? 'Back' : 'Front'}
             </button>
           )}
 
@@ -430,7 +430,7 @@ function MobileVerify() {
               ...styles.indicator,
               backgroundColor: faceDetected ? '#4CAF50' : '#FF9800'
             }}>
-              {faceDetected ? '✅ FACE DETECTED!' : '⚠️ Position Face'}
+              {faceDetected ? ' FACE DETECTED!' : ' Position Face'}
             </div>
           )}
         </div>
@@ -444,7 +444,7 @@ function MobileVerify() {
             cursor: (!faceDetected || capturing) ? 'not-allowed' : 'pointer'
           }}
         >
-          {capturing ? '⏳ Processing...' : '📸 Capture Face'}
+          {capturing ? ' Processing...' : ' Capture Face'}
         </button>
 
         <div style={styles.statusBox}>
@@ -452,7 +452,7 @@ function MobileVerify() {
         </div>
 
         <div style={styles.instructions}>
-          <p style={styles.instructionTitle}>💡 Tips:</p>
+          <p style={styles.instructionTitle}> Tips:</p>
           <ul style={styles.instructionList}>
             <li>Face camera directly</li>
             <li>Good lighting needed</li>

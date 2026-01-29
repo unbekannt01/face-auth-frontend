@@ -25,7 +25,7 @@ function Login() {
       
       if (data.sessionId === sessionId) {
         if (data.success) {
-          setStatus('✅ Face verified! Logging in...');
+          setStatus(' Face verified! Logging in...');
           setLoading(true);
 
           try {
@@ -45,7 +45,7 @@ function Login() {
               localStorage.setItem('authToken', response.data.token);
               localStorage.setItem('user', JSON.stringify(response.data.user));
               
-              setStatus('✅ Login Successful! Redirecting...');
+              setStatus(' Login Successful! Redirecting...');
               setShowQR(false);
               
               await new Promise(resolve => setTimeout(resolve, 800));
@@ -62,7 +62,7 @@ function Login() {
                            error.message || 
                            'Login failed. Please try again.';
             
-            setStatus('❌ ' + errorMsg);
+            setStatus(' ' + errorMsg);
             setShowQR(false);
             
             setTimeout(() => {
@@ -73,7 +73,7 @@ function Login() {
           }
         } else {
           setLoading(false);
-          setStatus('❌ ' + (data.message || 'Face verification failed.'));
+          setStatus(' ' + (data.message || 'Face verification failed.'));
           setShowQR(false);
           
           setTimeout(() => {
@@ -88,13 +88,13 @@ function Login() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      setStatus('⚠️ Please fill all fields');
+      setStatus(' Please fill all fields');
       return;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      setStatus('⚠️ Invalid email format');
+      setStatus(' Invalid email format');
       return;
     }
 
@@ -110,7 +110,7 @@ function Login() {
 
       if (sessionResponse.data.success) {
         setShowQR(true);
-        setStatus('📱 Scan QR code with mobile to verify face');
+        setStatus(' Scan QR code with mobile to verify face');
         setLoading(false);
         
         socket.emit('qr-generated', { 
@@ -122,7 +122,7 @@ function Login() {
     } catch (error) {
       setLoading(false);
       console.error('Session creation error:', error);
-      setStatus('❌ Failed to create session. Please try again.');
+      setStatus(' Failed to create session. Please try again.');
     }
   };
 
@@ -131,7 +131,7 @@ function Login() {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <h2 style={styles.title}>🔐 Secure Login</h2>
+        <h2 style={styles.title}> Secure Login</h2>
         
         <input
           type="email"
@@ -164,7 +164,7 @@ function Login() {
             cursor: (loading || showQR) ? 'not-allowed' : 'pointer'
           }}
         >
-          {loading ? '⏳ Processing...' : '🚀 Login with Face Authentication'}
+          {loading ? ' Processing...' : '🚀 Login with Face Authentication'}
         </button>
 
         {showQR && (
@@ -175,7 +175,7 @@ function Login() {
               level="H"
               includeMargin={true}
             />
-            <p style={styles.qrText}>📱 Scan with mobile camera</p>
+            <p style={styles.qrText}> Scan with mobile camera</p>
             <p style={styles.qrSubtext}>Open camera app or QR scanner</p>
             
             <div style={styles.manualLinkBox}>
@@ -198,7 +198,7 @@ function Login() {
               }}
               style={styles.cancelButton}
             >
-              ✕ Cancel
+               Cancel
             </button>
           </div>
         )}
@@ -206,10 +206,10 @@ function Login() {
         {status && (
           <div style={{
             ...styles.statusBox,
-            backgroundColor: status.includes('❌') ? '#fee' : 
-                           status.includes('✅') ? '#efe' : '#fff3cd',
-            color: status.includes('❌') ? '#c00' : 
-                   status.includes('✅') ? '#0a0' : '#856404',
+            backgroundColor: status.includes('') ? '#fee' : 
+                           status.includes('') ? '#efe' : '#fff3cd',
+            color: status.includes('') ? '#c00' : 
+                   status.includes('') ? '#0a0' : '#856404',
             border: `2px solid ${status.includes('❌') ? '#fcc' : 
                                  status.includes('✅') ? '#cfc' : '#ffeaa7'}`
           }}>

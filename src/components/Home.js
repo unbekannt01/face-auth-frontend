@@ -11,7 +11,7 @@ function Home() {
       <div style={styles.heroSection}>
         <div style={styles.heroContent}>
           <div style={styles.logoContainer}>
-            <div style={styles.logo}>🔐</div>
+            <div style={styles.logo}></div>
           </div>
           
           <h1 style={styles.mainTitle}>
@@ -43,7 +43,7 @@ function Home() {
               onMouseOver={(e) => e.target.style.transform = 'translateY(-2px)'}
               onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
             >
-              🔑 Login
+               Login
             </button>
           </div>
         </div>
@@ -71,7 +71,7 @@ function Home() {
           </div>
 
           <div style={styles.featureCard}>
-            <div style={styles.featureIcon}>📱</div>
+            <div style={styles.featureIcon}></div>
             <h3 style={styles.featureTitle}>Multi-Device</h3>
             <p style={styles.featureText}>
               Seamless QR-based mobile verification for enhanced security
@@ -151,7 +151,7 @@ function Home() {
           onMouseOver={(e) => e.target.style.transform = 'scale(1.05)'}
           onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
         >
-          Create Free Account 🎉
+          Create Free Account 
         </button>
       </div>
 
