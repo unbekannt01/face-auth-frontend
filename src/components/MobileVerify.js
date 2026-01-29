@@ -75,10 +75,9 @@ function MobileVerify() {
       setModelsLoaded(true);
       setStatus('📸 Starting camera...');
 
-      // Start camera immediately after models load
-      setTimeout(() => {
-        startCamera();
-      }, 500);
+      // FIXED: Immediate camera start
+      console.log('✅ Models loaded, starting camera NOW');
+      startCamera();
 
     } catch (error) {
       console.error('Model loading error:', error);
@@ -118,23 +117,81 @@ function MobileVerify() {
       stopCamera();
       setStatus('📸 Accessing camera...');
 
-      const stream = await navigator.mediaDevices.getUserMedia({
+      const constraints = {
         video: { 
-          facingMode: { ideal: facingMode },
+          facingMode: { exact: facingMode },
           width: { ideal: 1280 },
           height: { ideal: 720 }
         }
-      });
+      };
+
+      console.log('🎥 Requesting camera with facingMode:', facingMode);
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      console.log('✅ Camera stream obtained');
 
       streamRef.current = stream;
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         
-        // Wait for video to be ready
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current.play().then(() => {
-            // Set canvas dimensions
+        // CRITICAL FIX: Wait for video metadata AND play
+        await new Promise((resolve) => {
+          videoRef.current.onloadedmetadata = () => {
+            console.log('📹 Video metadata loaded');
+            resolve();
+          };
+        });
+
+        // Now play the video
+        await videoRef.current.play();
+        console.log('▶️ Video playing');
+
+        // CRITICAL FIX: Wait for video to have enough data
+        await new Promise((resolve) => {
+          const checkReady = () => {
+            if (videoRef.current.readyState >= 3) { // HAVE_FUTURE_DATA
+              console.log('✅ Video ready state:', videoRef.current.readyState);
+              resolve();
+            } else {
+              console.log('⏳ Waiting... ready state:', videoRef.current.readyState);
+              setTimeout(checkReady, 50);
+            }
+          };
+          checkReady();
+        });
+
+        // Set canvas dimensions
+        if (canvasRef.current && videoRef.current) {
+          canvasRef.current.width = videoRef.current.videoWidth;
+          canvasRef.current.height = videoRef.current.videoHeight;
+          console.log('📐 Canvas size:', canvasRef.current.width, 'x', canvasRef.current.height);
+        }
+        
+        setVideoReady(true);
+        setStatus('✅ Ready! Position your face');
+        
+        console.log('🚀 Starting face detection NOW');
+        // CRITICAL FIX: Start detection immediately
+        setTimeout(() => {
+          startFaceDetection();
+        }, 200);
+      }
+    } catch (error) {
+      console.error('❌ Camera error:', error);
+      
+      // Fallback: try without exact facingMode
+      if (error.name === 'OverconstrainedError') {
+        console.log('🔄 Trying fallback camera settings...');
+        try {
+          const fallbackStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: facingMode }
+          });
+          
+          streamRef.current = fallbackStream;
+          if (videoRef.current) {
+            videoRef.current.srcObject = fallbackStream;
+            await videoRef.current.play();
+            
             if (canvasRef.current) {
               canvasRef.current.width = videoRef.current.videoWidth;
               canvasRef.current.height = videoRef.current.videoHeight;
@@ -142,23 +199,121 @@ function MobileVerify() {
             
             setVideoReady(true);
             setStatus('✅ Ready! Position your face');
-            
-            // Start face detection immediately
-            startFaceDetection();
-          });
-        };
+            setTimeout(() => startFaceDetection(), 200);
+          }
+        } catch (fallbackError) {
+          console.error('❌ Fallback failed:', fallbackError);
+          setStatus('❌ Camera permission denied');
+        }
+      } else {
+        setStatus('❌ Camera permission denied');
       }
-    } catch (error) {
-      console.error('Camera error:', error);
-      setStatus('❌ Camera permission denied');
     }
   };
 
-  const switchCamera = () => {
+  const switchCamera = async () => {
+    console.log('🔄 Switching camera from', facingMode);
     const newMode = facingMode === 'user' ? 'environment' : 'user';
+    
     setFacingMode(newMode);
     setStatus('🔄 Switching camera...');
-    setTimeout(() => startCamera(), 100);
+    setFaceDetected(false);
+    setDetection(null);
+    
+    // CRITICAL FIX: Properly stop current camera first
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => {
+        track.stop();
+        console.log('🛑 Stopped track:', track.kind);
+      });
+      streamRef.current = null;
+    }
+    
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    
+    setVideoReady(false);
+    
+    // Wait a bit for cleanup then start new camera
+    setTimeout(async () => {
+      try {
+        const constraints = {
+          video: { 
+            facingMode: { exact: newMode },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        };
+
+        console.log('🎥 Starting new camera with:', newMode);
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        console.log('✅ New camera stream obtained');
+
+        streamRef.current = stream;
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          
+          await new Promise((resolve) => {
+            videoRef.current.onloadedmetadata = () => resolve();
+          });
+
+          await videoRef.current.play();
+          
+          // Wait for video ready
+          await new Promise((resolve) => {
+            const checkReady = () => {
+              if (videoRef.current.readyState >= 3) {
+                resolve();
+              } else {
+                setTimeout(checkReady, 50);
+              }
+            };
+            checkReady();
+          });
+
+          if (canvasRef.current) {
+            canvasRef.current.width = videoRef.current.videoWidth;
+            canvasRef.current.height = videoRef.current.videoHeight;
+          }
+          
+          setVideoReady(true);
+          setStatus('✅ Camera switched! Position your face');
+          
+          setTimeout(() => {
+            startFaceDetection();
+          }, 200);
+        }
+      } catch (error) {
+        console.error('❌ Camera switch error:', error);
+        
+        // Fallback without exact constraint
+        try {
+          const fallbackStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: newMode }
+          });
+          
+          streamRef.current = fallbackStream;
+          if (videoRef.current) {
+            videoRef.current.srcObject = fallbackStream;
+            await videoRef.current.play();
+            
+            if (canvasRef.current) {
+              canvasRef.current.width = videoRef.current.videoWidth;
+              canvasRef.current.height = videoRef.current.videoHeight;
+            }
+            
+            setVideoReady(true);
+            setStatus('✅ Camera switched! Position your face');
+            setTimeout(() => startFaceDetection(), 200);
+          }
+        } catch (fallbackError) {
+          console.error('❌ Fallback switch failed:', fallbackError);
+          setStatus('❌ Could not switch camera');
+        }
+      }
+    }, 300);
   };
 
   const drawFaceBox = (detection) => {
@@ -231,23 +386,41 @@ function MobileVerify() {
   };
 
   const startFaceDetection = () => {
-    if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current);
+    if (detectionIntervalRef.current) {
+      clearInterval(detectionIntervalRef.current);
+      detectionIntervalRef.current = null;
+    }
 
-    // Run face detection every 100ms for instant feedback
-    detectionIntervalRef.current = setInterval(async () => {
+    console.log('🔍 Face detection started');
+    let detectionCount = 0;
+
+    // CRITICAL FIX: Run face detection every 50ms for first 5 seconds, then 100ms
+    const initialInterval = 50; // Very fast initially
+    const normalInterval = 100; // Normal speed after
+
+    const runDetection = async () => {
       if (videoRef.current && videoReady && modelsLoaded && !capturing && !isProcessingRef.current) {
         try {
           isProcessingRef.current = true;
+          detectionCount++;
           
           const detectedFace = await faceapi
-            .detectSingleFace(videoRef.current, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
+            .detectSingleFace(videoRef.current, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.4 })) // Lower confidence for easier detection
             .withFaceLandmarks()
             .withFaceDescriptor();
 
           if (detectedFace) {
+            console.log('✅ Face detected! Count:', detectionCount);
             setFaceDetected(true);
             setDetection(detectedFace);
             drawFaceBox(detectedFace);
+            
+            // After first detection, slow down to normal interval
+            if (detectionCount === 1 && detectionIntervalRef.current) {
+              clearInterval(detectionIntervalRef.current);
+              console.log('⚡ Switching to normal detection speed');
+              detectionIntervalRef.current = setInterval(runDetection, normalInterval);
+            }
           } else {
             setFaceDetected(false);
             setDetection(null);
@@ -260,10 +433,26 @@ function MobileVerify() {
           
           isProcessingRef.current = false;
         } catch (err) {
+          console.error('Detection error:', err);
           isProcessingRef.current = false;
         }
       }
-    }, 100); // Fast detection interval
+    };
+
+    // Start with very fast interval
+    detectionIntervalRef.current = setInterval(runDetection, initialInterval);
+    
+    // Run immediately once
+    runDetection();
+    
+    // After 5 seconds, switch to normal interval if not already done
+    setTimeout(() => {
+      if (detectionIntervalRef.current && detectionCount === 0) {
+        clearInterval(detectionIntervalRef.current);
+        console.log('⏰ Timeout - switching to normal detection speed');
+        detectionIntervalRef.current = setInterval(runDetection, normalInterval);
+      }
+    }, 5000);
   };
 
   useEffect(() => {
