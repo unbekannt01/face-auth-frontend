@@ -91,7 +91,7 @@ function Dashboard() {
             borderRadius: '8px',
             color: '#2e7d32'
           }}>
-            ✅ <strong>Face Authentication Enabled</strong>
+             <strong>Face Authentication Enabled</strong>
           </p>
         </div>
 

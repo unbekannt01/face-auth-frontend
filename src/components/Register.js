@@ -44,7 +44,7 @@ function Register() {
       });
 
       if (response.data.success) {
-        setSuccess('✅ Registration Successful! Redirecting...');
+        setSuccess(' Registration Successful! Redirecting...');
         setLoading(false);
         
         setTimeout(() => {
@@ -66,7 +66,7 @@ function Register() {
     socket.on('face-verified', async (data) => {
       if (data.success && data.faceDescriptor) {
         setFaceDescriptor(data.faceDescriptor);
-        setSuccess('✅ Face captured successfully!');
+        setSuccess(' Face captured successfully!');
         setShowQR(false);
         
         setTimeout(() => {

@@ -50,7 +50,7 @@ function VerificationSuccess() {
           </div>
         </div>
 
-        <h1 style={styles.title}>✅ Verification Successful!</h1>
+        <h1 style={styles.title}> Verification Successful!</h1>
         
         <p style={styles.message}>
           Your face has been verified successfully.

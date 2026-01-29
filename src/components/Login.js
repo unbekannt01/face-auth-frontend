@@ -25,7 +25,7 @@ function Login() {
       
       if (data.sessionId === sessionId) {
         if (data.success) {
-          setStatus('✅ Face verified! Logging in...');
+          setStatus(' Face verified! Logging in...');
           setLoading(true);
 
           try {
@@ -47,7 +47,7 @@ function Login() {
               localStorage.setItem('authToken', response.data.token);
               localStorage.setItem('user', JSON.stringify(response.data.user));
               
-              setStatus('✅ Login Successful! Redirecting...');
+              setStatus(' Login Successful! Redirecting...');
               setShowQR(false);
               
               // Longer delay to ensure state updates
@@ -70,7 +70,7 @@ function Login() {
                            error.message || 
                            'Login failed. Please try again.';
             
-            setStatus('❌ ' + errorMsg);
+            setStatus(' ' + errorMsg);
             setShowQR(false);
             
             setTimeout(() => {
@@ -82,7 +82,7 @@ function Login() {
         } else {
           // Face verification failed
           setLoading(false);
-          setStatus('❌ ' + (data.message || 'Face verification failed. Face does not match.'));
+          setStatus(' ' + (data.message || 'Face verification failed. Face does not match.'));
           setShowQR(false);
           
           setTimeout(() => {
@@ -97,13 +97,13 @@ function Login() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      setStatus('❌ Please fill all fields');
+      setStatus(' Please fill all fields');
       return;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      setStatus('❌ Invalid email format');
+      setStatus(' Invalid email format');
       return;
     }
 
@@ -133,7 +133,7 @@ function Login() {
     } catch (error) {
       setLoading(false);
       console.error('Session creation error:', error);
-      setStatus('❌ Failed to create session. Please try again.');
+      setStatus(' Failed to create session. Please try again.');
     }
   };
 
@@ -218,12 +218,12 @@ function Login() {
         {status && (
           <div style={{
             ...styles.statusBox,
-            backgroundColor: status.includes('❌') ? '#fee' : 
-                           status.includes('✅') ? '#efe' : '#fff3cd',
-            color: status.includes('❌') ? '#c00' : 
-                   status.includes('✅') ? '#0a0' : '#856404',
-            border: `2px solid ${status.includes('❌') ? '#fcc' : 
-                                 status.includes('✅') ? '#cfc' : '#ffeaa7'}`
+            backgroundColor: status.includes('') ? '#fee' : 
+                           status.includes('') ? '#efe' : '#fff3cd',
+            color: status.includes('') ? '#c00' : 
+                   status.includes('') ? '#0a0' : '#856404',
+            border: `2px solid ${status.includes('') ? '#fcc' : 
+                                 status.includes('') ? '#cfc' : '#ffeaa7'}`
           }}>
             {status}
           </div>

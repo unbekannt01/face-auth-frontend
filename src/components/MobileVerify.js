@@ -22,7 +22,7 @@ function MobileVerify() {
   const isDetectingRef = useRef(false);
 
   const [modelsLoaded, setModelsLoaded] = useState(false);
-  const [status, setStatus] = useState('🔄 Initializing...');
+  const [status, setStatus] = useState(' Initializing...');
   const [sessionData, setSessionData] = useState(null);
   const [capturing, setCapturing] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
@@ -61,10 +61,10 @@ function MobileVerify() {
         });
         loadModels();
       } else {
-        setStatus('❌ Session expired');
+        setStatus(' Session expired');
       }
     } catch (error) {
-      setStatus('❌ Failed to load session');
+      setStatus(' Failed to load session');
       console.error('Session error:', error);
     }
   }, [sessionId]);
@@ -84,7 +84,7 @@ function MobileVerify() {
         faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
       ]);
       
-      console.log('[MODELS] ✅ ALL LOADED!');
+      console.log('[MODELS]  ALL LOADED!');
       setModelsLoaded(true);
       setStatus('📸 Starting camera...');
       
@@ -92,8 +92,8 @@ function MobileVerify() {
       startCamera();
       
     } catch (error) {
-      console.error('[MODELS] ❌ Loading failed:', error);
-      setStatus('❌ Failed to load AI. Refresh page.');
+      console.error('[MODELS]  Loading failed:', error);
+      setStatus(' Failed to load AI. Refresh page.');
     }
   };
 
@@ -114,12 +114,12 @@ function MobileVerify() {
       };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      console.log('[CAMERA] ✅ Stream obtained');
+      console.log('[CAMERA]  Stream obtained');
       
       streamRef.current = stream;
 
       if (!videoRef.current) {
-        console.error('[CAMERA] ❌ Video ref null');
+        console.error('[CAMERA]  Video ref null');
         return;
       }
 
@@ -141,7 +141,7 @@ function MobileVerify() {
       // CRITICAL: Start detection IMMEDIATELY, don't wait for perfect readyState
       console.log('[DETECTION] Starting IMMEDIATELY...');
       setVideoReady(true);
-      setStatus('✅ Detecting face...');
+      setStatus(' Detecting face...');
       startDetection();
 
       // Update canvas size when video metadata loads (async, non-blocking)
@@ -155,8 +155,8 @@ function MobileVerify() {
       };
 
     } catch (error) {
-      console.error('[CAMERA] ❌ Error:', error);
-      setStatus('❌ Camera access denied');
+      console.error('[CAMERA]  Error:', error);
+      setStatus(' Camera access denied');
     }
   };
 
@@ -203,7 +203,7 @@ function MobileVerify() {
         if (detection) {
           // FACE FOUND!
           if (!faceDetected) {
-            console.log('[DETECTION] ✅ FACE DETECTED!');
+            console.log('[DETECTION]  FACE DETECTED!');
           }
           
           setFaceDetected(true);
@@ -311,7 +311,7 @@ function MobileVerify() {
     }
     
     setVideoReady(false);
-    setStatus('🔄 Switching camera...');
+    setStatus(' Switching camera...');
     
     // Small delay for cleanup
     await new Promise(resolve => setTimeout(resolve, 200));
@@ -327,7 +327,7 @@ function MobileVerify() {
       };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      console.log('[CAMERA] ✅ Switched to', newMode);
+      console.log('[CAMERA]  Switched to', newMode);
       
       streamRef.current = stream;
 
@@ -342,7 +342,7 @@ function MobileVerify() {
         
         // CRITICAL: Start detection IMMEDIATELY
         setVideoReady(true);
-        setStatus('✅ Detecting face...');
+        setStatus(' Detecting face...');
         startDetection();
         
         videoRef.current.onloadedmetadata = () => {
@@ -354,7 +354,7 @@ function MobileVerify() {
       }
     } catch (error) {
       console.error('[CAMERA] Switch failed:', error);
-      setStatus('❌ Camera switch failed');
+      setStatus(' Camera switch failed');
     }
   };
 
@@ -386,7 +386,7 @@ function MobileVerify() {
     } catch (err) {
       console.error('[CAPTURE] Error:', err);
       setCapturing(false);
-      setStatus('❌ Capture failed');
+      setStatus(' Capture failed');
     }
   };
 
@@ -435,7 +435,7 @@ function MobileVerify() {
 
           {videoReady && (
             <button onClick={switchCamera} style={styles.switchBtn}>
-              🔄 {facingMode === 'user' ? 'Back' : 'Front'} Camera
+               {facingMode === 'user' ? 'Back' : 'Front'} Camera
             </button>
           )}
 

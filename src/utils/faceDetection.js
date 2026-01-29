@@ -25,7 +25,7 @@ class FaceDetectionService {
       const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
       
       try {
-        console.log('🔄 Loading face detection models...');
+        console.log(' Loading face detection models...');
         
         // Load all models in parallel for faster loading
         await Promise.all([
@@ -35,10 +35,10 @@ class FaceDetectionService {
         ]);
         
         this.isModelsLoaded = true;
-        console.log('✅ Face detection models loaded successfully');
+        console.log(' Face detection models loaded successfully');
         
       } catch (error) {
-        console.error('❌ Error loading face detection models:', error);
+        console.error(' Error loading face detection models:', error);
         this.modelLoadPromise = null; // Reset so it can be retried
         throw error;
       }
