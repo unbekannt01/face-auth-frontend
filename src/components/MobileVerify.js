@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable react-hooks/exhaustive-deps */
 // src/components/MobileVerify.jsx
-// ZERO DELAY VERSION - INSTANT DETECTION ON FIRST LOAD
+// FIXED VERSION - INSTANT FACE DETECTION
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -84,15 +84,15 @@ function MobileVerify() {
         faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
       ]);
       
-      console.log('[MODELS]  ALL LOADED!');
+      console.log('[MODELS] ✅ ALL LOADED!');
       setModelsLoaded(true);
       setStatus('📸 Starting camera...');
       
-      // CRITICAL: Start camera IMMEDIATELY, no delay!
-      startCamera();
+      // Start camera immediately
+      await startCamera();
       
     } catch (error) {
-      console.error('[MODELS]  Loading failed:', error);
+      console.error('[MODELS] ❌ Loading failed:', error);
       setStatus(' Failed to load AI. Refresh page.');
     }
   };
@@ -104,7 +104,6 @@ function MobileVerify() {
       console.log('[CAMERA] Starting with facingMode:', facingMode);
       setStatus('📸 Accessing camera...');
 
-      // CRITICAL: Simple, reliable constraints
       const constraints = {
         video: {
           facingMode: facingMode,
@@ -114,48 +113,65 @@ function MobileVerify() {
       };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      console.log('[CAMERA]  Stream obtained');
+      console.log('[CAMERA] ✅ Stream obtained');
       
       streamRef.current = stream;
 
       if (!videoRef.current) {
-        console.error('[CAMERA]  Video ref null');
+        console.error('[CAMERA] ❌ Video ref null');
         return;
       }
 
       videoRef.current.srcObject = stream;
       
-      // CRITICAL: Play immediately
-      videoRef.current.play().catch(err => {
-        console.error('[CAMERA] Play error:', err);
-      });
-
-      // CRITICAL: Setup canvas BEFORE waiting for video
+      // Setup canvas immediately
       if (canvasRef.current) {
-        // Set default size immediately
         canvasRef.current.width = 640;
         canvasRef.current.height = 480;
         console.log('[CANVAS] Initial size: 640x480');
       }
 
-      // CRITICAL: Start detection IMMEDIATELY, don't wait for perfect readyState
-      console.log('[DETECTION] Starting IMMEDIATELY...');
+      // ✅ CRITICAL FIX: Wait for video to actually have data before starting detection
+      console.log('[VIDEO] Waiting for video to have data...');
+      
+      // Play video
+      await videoRef.current.play();
+      
+      // Wait for video to have actual frames (readyState >= 2 means HAVE_CURRENT_DATA)
+      await new Promise((resolve) => {
+        const checkVideoReady = () => {
+          if (videoRef.current && videoRef.current.readyState >= 2) {
+            console.log('[VIDEO] ✅ Video has data! ReadyState:', videoRef.current.readyState);
+            resolve();
+          } else {
+            console.log('[VIDEO] ⏳ Waiting... ReadyState:', videoRef.current?.readyState);
+            requestAnimationFrame(checkVideoReady);
+          }
+        };
+        checkVideoReady();
+      });
+
+      // NOW start detection - video definitely has frames
+      console.log('[DETECTION] 🚀 Starting detection NOW');
       setVideoReady(true);
       setStatus(' Detecting face...');
+      isDetectingRef.current = true;
       startDetection();
 
-      // Update canvas size when video metadata loads (async, non-blocking)
+      // Update canvas size when metadata loads (for better accuracy)
       videoRef.current.onloadedmetadata = () => {
         console.log('[VIDEO] Metadata loaded');
         if (canvasRef.current && videoRef.current) {
-          canvasRef.current.width = videoRef.current.videoWidth || 640;
-          canvasRef.current.height = videoRef.current.videoHeight || 480;
-          console.log('[CANVAS] Updated size:', canvasRef.current.width, 'x', canvasRef.current.height);
+          const newWidth = videoRef.current.videoWidth || 640;
+          const newHeight = videoRef.current.videoHeight || 480;
+          canvasRef.current.width = newWidth;
+          canvasRef.current.height = newHeight;
+          console.log('[CANVAS] Updated to:', newWidth, 'x', newHeight);
         }
       };
 
     } catch (error) {
-      console.error('[CAMERA]  Error:', error);
+      console.error('[CAMERA] ❌ Error:', error);
       setStatus(' Camera access denied');
     }
   };
@@ -179,17 +195,17 @@ function MobileVerify() {
         return;
       }
 
-      // CRITICAL: Check if video has ANY data (even readyState 1 is OK!)
-      if (videoRef.current.readyState < 1) {
+      // Wait for video to have data
+      if (videoRef.current.readyState < 2) {
         detectionLoopRef.current = requestAnimationFrame(detect);
         return;
       }
 
       try {
-        // Detect face
+        // Detect face with lower confidence for easier detection
         const detection = await faceapi
           .detectSingleFace(videoRef.current, new faceapi.SsdMobilenetv1Options({ 
-            minConfidence: 0.3  // Low confidence for easy detection
+            minConfidence: 0.3
           }))
           .withFaceLandmarks()
           .withFaceDescriptor();
@@ -201,9 +217,9 @@ function MobileVerify() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         if (detection) {
-          // FACE FOUND!
+          // ✅ FACE FOUND!
           if (!faceDetected) {
-            console.log('[DETECTION]  FACE DETECTED!');
+            console.log('[DETECTION] 🎉 FACE DETECTED!');
           }
           
           setFaceDetected(true);
@@ -249,7 +265,7 @@ function MobileVerify() {
           ctx.lineTo(box.x + box.width, box.y + box.height - cornerLen);
           ctx.stroke();
           
-          // Draw landmarks (green dots)
+          // ✅ Draw landmarks (green dots) - THIS WAS MISSING OR NOT VISIBLE
           if (detection.landmarks) {
             ctx.fillStyle = '#00ff00';
             const landmarks = detection.landmarks.positions;
@@ -260,7 +276,7 @@ function MobileVerify() {
             });
           }
           
-          // Draw confidence
+          // Draw confidence with shadow for visibility
           ctx.fillStyle = '#00ff00';
           ctx.font = 'bold 20px Arial';
           ctx.shadowColor = 'black';
@@ -281,7 +297,7 @@ function MobileVerify() {
         console.error('[DETECTION] Error:', err);
       }
 
-      // Continue loop
+      // Continue loop - run every frame for smooth detection
       detectionLoopRef.current = requestAnimationFrame(detect);
     };
 
@@ -327,22 +343,36 @@ function MobileVerify() {
       };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      console.log('[CAMERA]  Switched to', newMode);
+      console.log('[CAMERA] ✅ Switched to', newMode);
       
       streamRef.current = stream;
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play();
         
         if (canvasRef.current) {
           canvasRef.current.width = 640;
           canvasRef.current.height = 480;
         }
         
-        // CRITICAL: Start detection IMMEDIATELY
+        // Play and wait for data
+        await videoRef.current.play();
+        
+        await new Promise((resolve) => {
+          const checkReady = () => {
+            if (videoRef.current && videoRef.current.readyState >= 2) {
+              resolve();
+            } else {
+              requestAnimationFrame(checkReady);
+            }
+          };
+          checkReady();
+        });
+        
+        // Start detection
         setVideoReady(true);
         setStatus(' Detecting face...');
+        isDetectingRef.current = true;
         startDetection();
         
         videoRef.current.onloadedmetadata = () => {
@@ -435,7 +465,7 @@ function MobileVerify() {
 
           {videoReady && (
             <button onClick={switchCamera} style={styles.switchBtn}>
-               {facingMode === 'user' ? 'Back' : 'Front'} Camera
+              🔄 {facingMode === 'user' ? 'Back' : 'Front'} Camera
             </button>
           )}
 
@@ -471,7 +501,7 @@ function MobileVerify() {
             <li>Face camera directly</li>
             <li>Ensure good lighting</li>
             <li>Remove glasses if needed</li>
-            <li>Wait for green box</li>
+            <li>Wait for green box & dots</li>
           </ul>
         </div>
       </div>
