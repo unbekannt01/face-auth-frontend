@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable react-hooks/exhaustive-deps */
 // src/components/MobileVerify.jsx
-// FIXED VERSION - INSTANT FACE DETECTION
+// FINAL FIX - INSTANT DETECTION ON FIRST LOAD
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -22,7 +22,7 @@ function MobileVerify() {
   const isDetectingRef = useRef(false);
 
   const [modelsLoaded, setModelsLoaded] = useState(false);
-  const [status, setStatus] = useState(' Initializing...');
+  const [status, setStatus] = useState('🔄 Initializing...');
   const [sessionData, setSessionData] = useState(null);
   const [capturing, setCapturing] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
@@ -61,10 +61,10 @@ function MobileVerify() {
         });
         loadModels();
       } else {
-        setStatus(' Session expired');
+        setStatus('❌ Session expired');
       }
     } catch (error) {
-      setStatus(' Failed to load session');
+      setStatus('❌ Failed to load session');
       console.error('Session error:', error);
     }
   }, [sessionId]);
@@ -93,7 +93,7 @@ function MobileVerify() {
       
     } catch (error) {
       console.error('[MODELS] ❌ Loading failed:', error);
-      setStatus(' Failed to load AI. Refresh page.');
+      setStatus('❌ Failed to load AI. Refresh page.');
     }
   };
 
@@ -124,55 +124,71 @@ function MobileVerify() {
 
       videoRef.current.srcObject = stream;
       
-      // Setup canvas immediately
-      if (canvasRef.current) {
-        canvasRef.current.width = 640;
-        canvasRef.current.height = 480;
-        console.log('[CANVAS] Initial size: 640x480');
-      }
-
-      // ✅ CRITICAL FIX: Wait for video to actually have data before starting detection
-      console.log('[VIDEO] Waiting for video to have data...');
+      // ✅ CRITICAL FIX 1: Wait for metadata FIRST to get correct video dimensions
+      console.log('[VIDEO] Waiting for metadata...');
       
-      // Play video
-      await videoRef.current.play();
-      
-      // Wait for video to have actual frames (readyState >= 2 means HAVE_CURRENT_DATA)
       await new Promise((resolve) => {
-        const checkVideoReady = () => {
-          if (videoRef.current && videoRef.current.readyState >= 2) {
-            console.log('[VIDEO] ✅ Video has data! ReadyState:', videoRef.current.readyState);
+        const checkMetadata = () => {
+          if (videoRef.current && videoRef.current.readyState >= 1) {
+            console.log('[VIDEO] ✅ Metadata ready! ReadyState:', videoRef.current.readyState);
             resolve();
           } else {
-            console.log('[VIDEO] ⏳ Waiting... ReadyState:', videoRef.current?.readyState);
-            requestAnimationFrame(checkVideoReady);
+            requestAnimationFrame(checkMetadata);
           }
         };
-        checkVideoReady();
+        
+        if (videoRef.current.readyState >= 1) {
+          resolve(); // Already has metadata
+        } else {
+          videoRef.current.addEventListener('loadedmetadata', () => resolve(), { once: true });
+          checkMetadata(); // Also poll just in case
+        }
       });
 
-      // NOW start detection - video definitely has frames
-      console.log('[DETECTION] 🚀 Starting detection NOW');
+      // ✅ CRITICAL FIX 2: Set canvas to ACTUAL video dimensions BEFORE playing
+      if (canvasRef.current && videoRef.current) {
+        const width = videoRef.current.videoWidth || 640;
+        const height = videoRef.current.videoHeight || 480;
+        canvasRef.current.width = width;
+        canvasRef.current.height = height;
+        console.log('[CANVAS] ✅ Set to actual video dimensions:', width, 'x', height);
+      }
+
+      // Now play video
+      console.log('[VIDEO] Starting playback...');
+      await videoRef.current.play();
+      console.log('[VIDEO] ✅ Playing');
+      
+      // ✅ CRITICAL FIX 3: Wait for video to have actual frame data
+      console.log('[VIDEO] Waiting for frame data...');
+      await new Promise((resolve) => {
+        const checkFrames = () => {
+          if (videoRef.current && videoRef.current.readyState >= 3) {
+            // ReadyState 3 = HAVE_FUTURE_DATA (better than 2)
+            console.log('[VIDEO] ✅ Frame data ready! ReadyState:', videoRef.current.readyState);
+            resolve();
+          } else {
+            requestAnimationFrame(checkFrames);
+          }
+        };
+        checkFrames();
+      });
+
+      // ✅ CRITICAL FIX 4: Add delay for mobile stream stabilization
+      console.log('[VIDEO] ⏳ Stabilizing stream (500ms)...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      console.log('[VIDEO] ✅ Stream stabilized');
+
+      // ✅ NOW start detection - everything is perfectly ready!
+      console.log('[DETECTION] 🚀 Starting detection NOW (all systems ready)');
       setVideoReady(true);
-      setStatus(' Detecting face...');
+      setStatus('✨ Ready! Position your face');
       isDetectingRef.current = true;
       startDetection();
 
-      // Update canvas size when metadata loads (for better accuracy)
-      videoRef.current.onloadedmetadata = () => {
-        console.log('[VIDEO] Metadata loaded');
-        if (canvasRef.current && videoRef.current) {
-          const newWidth = videoRef.current.videoWidth || 640;
-          const newHeight = videoRef.current.videoHeight || 480;
-          canvasRef.current.width = newWidth;
-          canvasRef.current.height = newHeight;
-          console.log('[CANVAS] Updated to:', newWidth, 'x', newHeight);
-        }
-      };
-
     } catch (error) {
       console.error('[CAMERA] ❌ Error:', error);
-      setStatus(' Camera access denied');
+      setStatus('❌ Camera access denied');
     }
   };
 
@@ -181,12 +197,15 @@ function MobileVerify() {
       cancelAnimationFrame(detectionLoopRef.current);
     }
 
-    console.log('[DETECTION] Loop started');
+    console.log('[DETECTION] 🎬 Detection loop started');
     isDetectingRef.current = true;
+    
+    let detectionCount = 0;
     
     const detect = async () => {
       // Check if we should continue
       if (!isDetectingRef.current || capturing || !modelsLoaded) {
+        console.log('[DETECTION] Stopped - flags:', { isDetecting: isDetectingRef.current, capturing, modelsLoaded });
         return;
       }
 
@@ -195,17 +214,24 @@ function MobileVerify() {
         return;
       }
 
-      // Wait for video to have data
+      // Ensure video has data
       if (videoRef.current.readyState < 2) {
         detectionLoopRef.current = requestAnimationFrame(detect);
         return;
       }
 
       try {
+        detectionCount++;
+        
+        // Log every 30 frames to avoid spam
+        if (detectionCount % 30 === 1) {
+          console.log('[DETECTION] Running... (frame', detectionCount, ')');
+        }
+
         // Detect face with lower confidence for easier detection
         const detection = await faceapi
           .detectSingleFace(videoRef.current, new faceapi.SsdMobilenetv1Options({ 
-            minConfidence: 0.3
+            minConfidence: 0.3  // Low threshold for easy detection
           }))
           .withFaceLandmarks()
           .withFaceDescriptor();
@@ -219,7 +245,7 @@ function MobileVerify() {
         if (detection) {
           // ✅ FACE FOUND!
           if (!faceDetected) {
-            console.log('[DETECTION] 🎉 FACE DETECTED!');
+            console.log('[DETECTION] 🎉 FACE DETECTED! (frame', detectionCount, ')');
           }
           
           setFaceDetected(true);
@@ -265,15 +291,20 @@ function MobileVerify() {
           ctx.lineTo(box.x + box.width, box.y + box.height - cornerLen);
           ctx.stroke();
           
-          // ✅ Draw landmarks (green dots) - THIS WAS MISSING OR NOT VISIBLE
+          // ✅ Draw landmarks (GREEN DOTS) - Bigger and more visible!
           if (detection.landmarks) {
             ctx.fillStyle = '#00ff00';
+            ctx.shadowColor = '#00ff00';
+            ctx.shadowBlur = 3;
+            
             const landmarks = detection.landmarks.positions;
             landmarks.forEach(point => {
               ctx.beginPath();
               ctx.arc(point.x, point.y, 3, 0, 2 * Math.PI);
               ctx.fill();
             });
+            
+            ctx.shadowBlur = 0;
           }
           
           // Draw confidence with shadow for visibility
@@ -287,14 +318,14 @@ function MobileVerify() {
         } else {
           // No face
           if (faceDetected) {
-            console.log('[DETECTION] ⚠️ Face lost');
+            console.log('[DETECTION] ⚠️ Face lost (frame', detectionCount, ')');
           }
           setFaceDetected(false);
           setCurrentDetection(null);
         }
 
       } catch (err) {
-        console.error('[DETECTION] Error:', err);
+        console.error('[DETECTION] ❌ Error:', err);
       }
 
       // Continue loop - run every frame for smooth detection
@@ -306,7 +337,7 @@ function MobileVerify() {
   };
 
   const switchCamera = async () => {
-    console.log('[CAMERA] Switching from', facingMode);
+    console.log('[CAMERA] 🔄 Switching from', facingMode);
     
     const newMode = facingMode === 'user' ? 'environment' : 'user';
     setFacingMode(newMode);
@@ -327,65 +358,13 @@ function MobileVerify() {
     }
     
     setVideoReady(false);
-    setStatus(' Switching camera...');
+    setStatus('🔄 Switching camera...');
     
     // Small delay for cleanup
     await new Promise(resolve => setTimeout(resolve, 200));
     
-    // Start new camera with new mode
-    try {
-      const constraints = {
-        video: {
-          facingMode: newMode,
-          width: { ideal: 640 },
-          height: { ideal: 480 }
-        }
-      };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      console.log('[CAMERA] ✅ Switched to', newMode);
-      
-      streamRef.current = stream;
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        
-        if (canvasRef.current) {
-          canvasRef.current.width = 640;
-          canvasRef.current.height = 480;
-        }
-        
-        // Play and wait for data
-        await videoRef.current.play();
-        
-        await new Promise((resolve) => {
-          const checkReady = () => {
-            if (videoRef.current && videoRef.current.readyState >= 2) {
-              resolve();
-            } else {
-              requestAnimationFrame(checkReady);
-            }
-          };
-          checkReady();
-        });
-        
-        // Start detection
-        setVideoReady(true);
-        setStatus(' Detecting face...');
-        isDetectingRef.current = true;
-        startDetection();
-        
-        videoRef.current.onloadedmetadata = () => {
-          if (canvasRef.current && videoRef.current) {
-            canvasRef.current.width = videoRef.current.videoWidth || 640;
-            canvasRef.current.height = videoRef.current.videoHeight || 480;
-          }
-        };
-      }
-    } catch (error) {
-      console.error('[CAMERA] Switch failed:', error);
-      setStatus(' Camera switch failed');
-    }
+    // Restart camera with new mode (uses same startCamera logic)
+    await startCamera();
   };
 
   const captureFace = async () => {
@@ -397,7 +376,7 @@ function MobileVerify() {
     try {
       const descriptor = Array.from(currentDetection.descriptor);
       
-      console.log('[CAPTURE] Sending to server...');
+      console.log('[CAPTURE] ✅ Sending to server...');
       socket.emit('face-captured', {
         sessionId: sessionData.sessionId,
         faceDescriptor: descriptor,
@@ -414,9 +393,9 @@ function MobileVerify() {
       }, 2000);
 
     } catch (err) {
-      console.error('[CAPTURE] Error:', err);
+      console.error('[CAPTURE] ❌ Error:', err);
       setCapturing(false);
-      setStatus(' Capture failed');
+      setStatus('❌ Capture failed');
     }
   };
 
