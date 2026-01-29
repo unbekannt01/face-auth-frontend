@@ -1,6 +1,8 @@
-// src/App.js
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import RouteLoader from './components/RouteLoader';
+import AppLoader from './components/AppLoader';
+
 import Home from './components/Home';
 import Login from './components/Login';
 import Register from './components/Register';
@@ -9,16 +11,27 @@ import MobileVerify from './components/MobileVerify';
 import VerificationSuccess from './components/VerificationSuccess';
 
 function App() {
+  const [initialLoading, setInitialLoading] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setInitialLoading(false), 1000);
+    return () => clearTimeout(t);
+  }, []);
+
+  if (initialLoading) return <AppLoader />;
+
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/mobile-verify/:sessionId" element={<MobileVerify />} />
-        <Route path="/verification-success" element={<VerificationSuccess />} />
-      </Routes>
+      <RouteLoader>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/mobile-verify/:sessionId" element={<MobileVerify />} />
+          <Route path="/verification-success" element={<VerificationSuccess />} />
+        </Routes>
+      </RouteLoader>
     </Router>
   );
 }

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { config } from '../config';
+import AppLoader from './AppLoader';
 
 const API_URL = config.API_URL;
 
@@ -41,18 +42,8 @@ function Dashboard() {
     navigate('/login');
   };
 
-  if (loading) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}>
-        <h2>⏳ Loading...</h2>
-      </div>
-    );
-  }
+  if (loading) return <AppLoader />;
+
 
   return (
     <div style={{
