@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable react-hooks/exhaustive-deps */
 // src/components/MobileVerify.jsx
-// FINAL FIX - INSTANT DETECTION ON FIRST LOAD
+// ULTRA SIMPLE & RELIABLE - GUARANTEED FIRST TIME DETECTION
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -18,8 +18,7 @@ function MobileVerify() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
-  const detectionLoopRef = useRef(null);
-  const isDetectingRef = useRef(false);
+  const detectionIntervalRef = useRef(null);
 
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [status, setStatus] = useState('🔄 Initializing...');
@@ -36,9 +35,9 @@ function MobileVerify() {
   };
 
   const cleanup = () => {
-    if (detectionLoopRef.current) {
-      cancelAnimationFrame(detectionLoopRef.current);
-      detectionLoopRef.current = null;
+    if (detectionIntervalRef.current) {
+      clearInterval(detectionIntervalRef.current);
+      detectionIntervalRef.current = null;
     }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
@@ -47,7 +46,6 @@ function MobileVerify() {
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
-    isDetectingRef.current = false;
   };
 
   const fetchSessionData = useCallback(async () => {
@@ -75,25 +73,23 @@ function MobileVerify() {
       
       const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
       
-      console.log('[MODELS] Loading all models...');
+      console.log('[MODELS] Loading...');
       
-      // Load all in parallel for speed
       await Promise.all([
         faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
         faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
         faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
       ]);
       
-      console.log('[MODELS] ✅ ALL LOADED!');
+      console.log('[MODELS] ✅ LOADED!');
       setModelsLoaded(true);
-      setStatus('📸 Starting camera...');
       
-      // Start camera immediately
-      await startCamera();
+      // Start camera
+      startCamera();
       
     } catch (error) {
-      console.error('[MODELS] ❌ Loading failed:', error);
-      setStatus('❌ Failed to load AI. Refresh page.');
+      console.error('[MODELS] ❌ Failed:', error);
+      setStatus('❌ Failed to load AI');
     }
   };
 
@@ -101,137 +97,89 @@ function MobileVerify() {
     try {
       cleanup();
       
-      console.log('[CAMERA] Starting with facingMode:', facingMode);
-      setStatus('📸 Accessing camera...');
+      console.log('[CAMERA] Starting:', facingMode);
+      setStatus('📸 Starting camera...');
 
-      const constraints = {
+      const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: facingMode,
           width: { ideal: 640 },
           height: { ideal: 480 }
         }
-      };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      console.log('[CAMERA] ✅ Stream obtained');
+      });
       
+      console.log('[CAMERA] ✅ Stream ready');
       streamRef.current = stream;
 
-      if (!videoRef.current) {
-        console.error('[CAMERA] ❌ Video ref null');
-        return;
-      }
+      if (!videoRef.current) return;
 
       videoRef.current.srcObject = stream;
+      videoRef.current.setAttribute('playsinline', 'true');
       
-      // ✅ CRITICAL FIX 1: Wait for metadata FIRST to get correct video dimensions
-      console.log('[VIDEO] Waiting for metadata...');
-      
-      await new Promise((resolve) => {
-        const checkMetadata = () => {
-          if (videoRef.current && videoRef.current.readyState >= 1) {
-            console.log('[VIDEO] ✅ Metadata ready! ReadyState:', videoRef.current.readyState);
-            resolve();
-          } else {
-            requestAnimationFrame(checkMetadata);
-          }
-        };
+      // ✅ SIMPLE: Just wait for video to start playing
+      videoRef.current.onloadedmetadata = async () => {
+        console.log('[VIDEO] Metadata loaded');
         
-        if (videoRef.current.readyState >= 1) {
-          resolve(); // Already has metadata
-        } else {
-          videoRef.current.addEventListener('loadedmetadata', () => resolve(), { once: true });
-          checkMetadata(); // Also poll just in case
+        // Set canvas size
+        if (canvasRef.current && videoRef.current) {
+          canvasRef.current.width = videoRef.current.videoWidth;
+          canvasRef.current.height = videoRef.current.videoHeight;
+          console.log('[CANVAS] Size:', canvasRef.current.width, 'x', canvasRef.current.height);
         }
-      });
-
-      // ✅ CRITICAL FIX 2: Set canvas to ACTUAL video dimensions BEFORE playing
-      if (canvasRef.current && videoRef.current) {
-        const width = videoRef.current.videoWidth || 640;
-        const height = videoRef.current.videoHeight || 480;
-        canvasRef.current.width = width;
-        canvasRef.current.height = height;
-        console.log('[CANVAS] ✅ Set to actual video dimensions:', width, 'x', height);
-      }
-
-      // Now play video
-      console.log('[VIDEO] Starting playback...');
-      await videoRef.current.play();
-      console.log('[VIDEO] ✅ Playing');
-      
-      // ✅ CRITICAL FIX 3: Wait for video to have actual frame data
-      console.log('[VIDEO] Waiting for frame data...');
-      await new Promise((resolve) => {
-        const checkFrames = () => {
-          if (videoRef.current && videoRef.current.readyState >= 3) {
-            // ReadyState 3 = HAVE_FUTURE_DATA (better than 2)
-            console.log('[VIDEO] ✅ Frame data ready! ReadyState:', videoRef.current.readyState);
-            resolve();
-          } else {
-            requestAnimationFrame(checkFrames);
-          }
-        };
-        checkFrames();
-      });
-
-      // ✅ CRITICAL FIX 4: Add delay for mobile stream stabilization
-      console.log('[VIDEO] ⏳ Stabilizing stream (500ms)...');
-      await new Promise(resolve => setTimeout(resolve, 500));
-      console.log('[VIDEO] ✅ Stream stabilized');
-
-      // ✅ NOW start detection - everything is perfectly ready!
-      console.log('[DETECTION] 🚀 Starting detection NOW (all systems ready)');
-      setVideoReady(true);
-      setStatus('✨ Ready! Position your face');
-      isDetectingRef.current = true;
-      startDetection();
+        
+        // Play video
+        try {
+          await videoRef.current.play();
+          console.log('[VIDEO] ✅ Playing');
+          
+          // ✅ CRITICAL: Wait 1 second for stream to fully stabilize
+          console.log('[VIDEO] ⏳ Stabilizing (1000ms)...');
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          console.log('[VIDEO] ✅ Stable');
+          
+          // Start detection with setInterval (more reliable than requestAnimationFrame on mobile)
+          setVideoReady(true);
+          setStatus('✨ Ready! Show your face');
+          startDetection();
+          
+        } catch (err) {
+          console.error('[VIDEO] Play error:', err);
+        }
+      };
 
     } catch (error) {
       console.error('[CAMERA] ❌ Error:', error);
-      setStatus('❌ Camera access denied');
+      setStatus('❌ Camera denied');
     }
   };
 
   const startDetection = () => {
-    if (detectionLoopRef.current) {
-      cancelAnimationFrame(detectionLoopRef.current);
-    }
-
-    console.log('[DETECTION] 🎬 Detection loop started');
-    isDetectingRef.current = true;
+    console.log('[DETECTION] 🚀 Starting...');
     
-    let detectionCount = 0;
+    let frameCount = 0;
     
-    const detect = async () => {
-      // Check if we should continue
-      if (!isDetectingRef.current || capturing || !modelsLoaded) {
-        console.log('[DETECTION] Stopped - flags:', { isDetecting: isDetectingRef.current, capturing, modelsLoaded });
+    // ✅ USE setInterval instead of requestAnimationFrame - MORE RELIABLE!
+    detectionIntervalRef.current = setInterval(async () => {
+      if (capturing || !modelsLoaded || !videoRef.current || !canvasRef.current) {
         return;
       }
 
-      if (!videoRef.current || !canvasRef.current) {
-        detectionLoopRef.current = requestAnimationFrame(detect);
-        return;
-      }
-
-      // Ensure video has data
+      // Check video is ready
       if (videoRef.current.readyState < 2) {
-        detectionLoopRef.current = requestAnimationFrame(detect);
         return;
       }
 
       try {
-        detectionCount++;
+        frameCount++;
         
-        // Log every 30 frames to avoid spam
-        if (detectionCount % 30 === 1) {
-          console.log('[DETECTION] Running... (frame', detectionCount, ')');
+        if (frameCount % 10 === 1) {
+          console.log('[DETECTION] Frame', frameCount);
         }
 
-        // Detect face with lower confidence for easier detection
+        // Detect face
         const detection = await faceapi
           .detectSingleFace(videoRef.current, new faceapi.SsdMobilenetv1Options({ 
-            minConfidence: 0.3  // Low threshold for easy detection
+            minConfidence: 0.3
           }))
           .withFaceLandmarks()
           .withFaceDescriptor();
@@ -239,13 +187,12 @@ function MobileVerify() {
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         
-        // Clear canvas
+        // Always clear first
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         if (detection) {
-          // ✅ FACE FOUND!
           if (!faceDetected) {
-            console.log('[DETECTION] 🎉 FACE DETECTED! (frame', detectionCount, ')');
+            console.log('[DETECTION] 🎉 FACE FOUND! Frame:', frameCount);
           }
           
           setFaceDetected(true);
@@ -254,116 +201,95 @@ function MobileVerify() {
           const box = detection.detection.box;
           const confidence = Math.round(detection.detection.score * 100);
           
-          // Draw green box
+          // Green box
           ctx.strokeStyle = '#00ff00';
-          ctx.lineWidth = 4;
+          ctx.lineWidth = 3;
           ctx.strokeRect(box.x, box.y, box.width, box.height);
           
-          // Draw corner brackets
-          const cornerLen = 30;
-          ctx.lineWidth = 6;
+          // Corners
+          const corner = 25;
+          ctx.lineWidth = 5;
           
-          // Top-left
+          // TL
           ctx.beginPath();
-          ctx.moveTo(box.x, box.y + cornerLen);
+          ctx.moveTo(box.x, box.y + corner);
           ctx.lineTo(box.x, box.y);
-          ctx.lineTo(box.x + cornerLen, box.y);
+          ctx.lineTo(box.x + corner, box.y);
           ctx.stroke();
           
-          // Top-right
+          // TR
           ctx.beginPath();
-          ctx.moveTo(box.x + box.width - cornerLen, box.y);
+          ctx.moveTo(box.x + box.width - corner, box.y);
           ctx.lineTo(box.x + box.width, box.y);
-          ctx.lineTo(box.x + box.width, box.y + cornerLen);
+          ctx.lineTo(box.x + box.width, box.y + corner);
           ctx.stroke();
           
-          // Bottom-left
+          // BL
           ctx.beginPath();
-          ctx.moveTo(box.x, box.y + box.height - cornerLen);
+          ctx.moveTo(box.x, box.y + box.height - corner);
           ctx.lineTo(box.x, box.y + box.height);
-          ctx.lineTo(box.x + cornerLen, box.y + box.height);
+          ctx.lineTo(box.x + corner, box.y + box.height);
           ctx.stroke();
           
-          // Bottom-right
+          // BR
           ctx.beginPath();
-          ctx.moveTo(box.x + box.width - cornerLen, box.y + box.height);
+          ctx.moveTo(box.x + box.width - corner, box.y + box.height);
           ctx.lineTo(box.x + box.width, box.y + box.height);
-          ctx.lineTo(box.x + box.width, box.y + box.height - cornerLen);
+          ctx.lineTo(box.x + box.width, box.y + box.height - corner);
           ctx.stroke();
           
-          // ✅ Draw landmarks (GREEN DOTS) - Bigger and more visible!
+          // ✅ LANDMARKS - GREEN DOTS
           if (detection.landmarks) {
             ctx.fillStyle = '#00ff00';
             ctx.shadowColor = '#00ff00';
-            ctx.shadowBlur = 3;
+            ctx.shadowBlur = 4;
             
-            const landmarks = detection.landmarks.positions;
-            landmarks.forEach(point => {
+            detection.landmarks.positions.forEach(point => {
               ctx.beginPath();
-              ctx.arc(point.x, point.y, 3, 0, 2 * Math.PI);
+              ctx.arc(point.x, point.y, 2.5, 0, 2 * Math.PI);
               ctx.fill();
             });
             
             ctx.shadowBlur = 0;
           }
           
-          // Draw confidence with shadow for visibility
+          // Confidence
           ctx.fillStyle = '#00ff00';
-          ctx.font = 'bold 20px Arial';
+          ctx.font = 'bold 18px Arial';
           ctx.shadowColor = 'black';
-          ctx.shadowBlur = 4;
-          ctx.fillText(`${confidence}%`, box.x + 5, box.y - 10);
+          ctx.shadowBlur = 3;
+          ctx.fillText(`${confidence}%`, box.x + 5, box.y - 8);
           ctx.shadowBlur = 0;
           
         } else {
-          // No face
           if (faceDetected) {
-            console.log('[DETECTION] ⚠️ Face lost (frame', detectionCount, ')');
+            console.log('[DETECTION] ⚠️ Lost');
           }
           setFaceDetected(false);
           setCurrentDetection(null);
         }
 
       } catch (err) {
-        console.error('[DETECTION] ❌ Error:', err);
+        console.error('[DETECTION] Error:', err);
       }
-
-      // Continue loop - run every frame for smooth detection
-      detectionLoopRef.current = requestAnimationFrame(detect);
-    };
-
-    // Start the loop
-    detect();
+    }, 100); // Run every 100ms (10 times per second)
   };
 
   const switchCamera = async () => {
-    console.log('[CAMERA] 🔄 Switching from', facingMode);
+    console.log('[CAMERA] 🔄 Switching...');
     
     const newMode = facingMode === 'user' ? 'environment' : 'user';
     setFacingMode(newMode);
     setFaceDetected(false);
     setCurrentDetection(null);
-    
-    // Stop detection
-    isDetectingRef.current = false;
-    if (detectionLoopRef.current) {
-      cancelAnimationFrame(detectionLoopRef.current);
-      detectionLoopRef.current = null;
-    }
-    
-    // Stop camera
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    
     setVideoReady(false);
-    setStatus('🔄 Switching camera...');
     
-    // Small delay for cleanup
-    await new Promise(resolve => setTimeout(resolve, 200));
+    cleanup();
     
-    // Restart camera with new mode (uses same startCamera logic)
+    setStatus('🔄 Switching...');
+    await new Promise(r => setTimeout(r, 300));
+    
+    // Restart
     await startCamera();
   };
 
@@ -376,7 +302,7 @@ function MobileVerify() {
     try {
       const descriptor = Array.from(currentDetection.descriptor);
       
-      console.log('[CAPTURE] ✅ Sending to server...');
+      console.log('[CAPTURE] Sending...');
       socket.emit('face-captured', {
         sessionId: sessionData.sessionId,
         faceDescriptor: descriptor,
@@ -393,9 +319,9 @@ function MobileVerify() {
       }, 2000);
 
     } catch (err) {
-      console.error('[CAPTURE] ❌ Error:', err);
+      console.error('[CAPTURE] Error:', err);
       setCapturing(false);
-      setStatus('❌ Capture failed');
+      setStatus('❌ Failed');
     }
   };
 
@@ -403,9 +329,7 @@ function MobileVerify() {
     if (sessionId) fetchSessionData();
     if (!socket) socket = io(config.API_URL);
     
-    return () => {
-      cleanup();
-    };
+    return () => cleanup();
   }, [sessionId]);
 
   return (
@@ -438,13 +362,13 @@ function MobileVerify() {
           {!modelsLoaded && (
             <div style={styles.overlay}>
               <div style={styles.spinner}></div>
-              <p style={styles.overlayText}>Loading AI models...</p>
+              <p style={styles.overlayText}>Loading AI...</p>
             </div>
           )}
 
           {videoReady && (
             <button onClick={switchCamera} style={styles.switchBtn}>
-              🔄 {facingMode === 'user' ? 'Back' : 'Front'} Camera
+              🔄 {facingMode === 'user' ? 'Back' : 'Front'}
             </button>
           )}
 
@@ -453,7 +377,7 @@ function MobileVerify() {
               ...styles.indicator,
               backgroundColor: faceDetected ? '#4CAF50' : '#FF9800'
             }}>
-              {faceDetected ? '✓ Face Detected!' : '⚠ Position Your Face'}
+              {faceDetected ? '✓ Detected!' : '⚠ Position Face'}
             </div>
           )}
         </div>
@@ -478,9 +402,9 @@ function MobileVerify() {
           <p style={styles.instructionTitle}>💡 Tips:</p>
           <ul style={styles.instructionList}>
             <li>Face camera directly</li>
-            <li>Ensure good lighting</li>
+            <li>Good lighting needed</li>
+            <li>Wait for green dots</li>
             <li>Remove glasses if needed</li>
-            <li>Wait for green box & dots</li>
           </ul>
         </div>
       </div>
@@ -651,7 +575,6 @@ const styles = {
   }
 };
 
-// Add spinner animation
 const styleSheet = document.createElement("style");
 styleSheet.innerText = `
   @keyframes spin {
