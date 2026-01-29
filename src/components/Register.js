@@ -1,4 +1,4 @@
-// src/components/Register.jsx
+// src/components/Register.js
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
@@ -44,7 +44,7 @@ function Register() {
       });
 
       if (response.data.success) {
-        setSuccess(' Registration Successful! Redirecting...');
+        setSuccess('✅ Registration Successful! Redirecting...');
         setLoading(false);
         
         setTimeout(() => {
@@ -58,7 +58,6 @@ function Register() {
   }, [formData.name, formData.email, formData.password, navigate]);
 
   useEffect(() => {
-    // Initialize socket connection
     if (!socket) {
       socket = io(config.API_URL);
     }
@@ -66,7 +65,7 @@ function Register() {
     socket.on('face-verified', async (data) => {
       if (data.success && data.faceDescriptor) {
         setFaceDescriptor(data.faceDescriptor);
-        setSuccess(' Face captured successfully!');
+        setSuccess('✅ Face captured successfully!');
         setShowQR(false);
         
         setTimeout(() => {
@@ -140,7 +139,6 @@ function Register() {
     }
   };
 
-  // FIXED: Proper QR data with full URL
   const qrData = `${config.APP_URL}/mobile-verify/${sessionId}`;
 
   return (
@@ -203,6 +201,10 @@ function Register() {
             <p style={styles.loginLink}>
               Already have an account? {' '}
               <a href="/login" style={styles.link}>Login here</a>
+            </p>
+            
+            <p style={styles.homeLink}>
+              <a href="/" style={styles.link}>← Back to Home</a>
             </p>
           </form>
         )}
@@ -480,6 +482,11 @@ const styles = {
     textAlign: 'center',
     marginTop: '20px',
     color: '#666',
+    fontSize: '14px'
+  },
+  homeLink: {
+    textAlign: 'center',
+    marginTop: '10px',
     fontSize: '14px'
   },
   link: {

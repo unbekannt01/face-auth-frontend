@@ -1,4 +1,4 @@
-// frontend/src/components/Login.jsx
+// src/components/Login.js
 import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import io from 'socket.io-client';
@@ -21,56 +21,48 @@ function Login() {
   useEffect(() => {
     // Listen for face verification from mobile
     socket.on('face-verification-complete', async (data) => {
-      console.log('[v0] Face verification result:', data);
+      console.log('[Login] Face verification result:', data);
       
       if (data.sessionId === sessionId) {
         if (data.success) {
-          setStatus(' Face verified! Logging in...');
+          setStatus('✅ Face verified! Logging in...');
           setLoading(true);
 
           try {
-            // Wait a bit longer for server to update session status (increased from 500ms to 1.5s)
-            console.log('[v0] Waiting for server session update...');
+            console.log('[Login] Waiting for server session update...');
             await new Promise(resolve => setTimeout(resolve, 1500));
             
-            console.log('[v0] Completing login for session:', sessionId);
+            console.log('[Login] Completing login for session:', sessionId);
             
-            // FIXED: Use the CORRECT backend endpoint that EXISTS
             const response = await axios.post(`${config.API_URL}/api/auth/login/complete`, {
               sessionId: sessionId
             });
 
-            console.log('[v0] Login complete response:', response.data);
+            console.log('[Login] Login complete response:', response.data);
 
             if (response.data.success) {
-              console.log('[v0] Token received:', response.data.token.substring(0, 20) + '...');
+              console.log('[Login] Token received');
               localStorage.setItem('authToken', response.data.token);
               localStorage.setItem('user', JSON.stringify(response.data.user));
               
-              setStatus(' Login Successful! Redirecting...');
+              setStatus('✅ Login Successful! Redirecting...');
               setShowQR(false);
               
-              // Longer delay to ensure state updates
               await new Promise(resolve => setTimeout(resolve, 800));
-              console.log('[v0] Navigating to dashboard...');
+              console.log('[Login] Navigating to dashboard...');
               navigate('/dashboard');
             } else {
               throw new Error(response.data.message || 'Login failed');
             }
           } catch (error) {
             setLoading(false);
-            console.error('[v0] Login error details:', {
-              status: error.response?.status,
-              statusText: error.response?.statusText,
-              message: error.response?.data?.message,
-              errorMsg: error.message
-            });
+            console.error('[Login] Error:', error);
             
             const errorMsg = error.response?.data?.message || 
                            error.message || 
                            'Login failed. Please try again.';
             
-            setStatus(' ' + errorMsg);
+            setStatus('❌ ' + errorMsg);
             setShowQR(false);
             
             setTimeout(() => {
@@ -80,9 +72,8 @@ function Login() {
             }, 4000);
           }
         } else {
-          // Face verification failed
           setLoading(false);
-          setStatus(' ' + (data.message || 'Face verification failed. Face does not match.'));
+          setStatus('❌ ' + (data.message || 'Face verification failed.'));
           setShowQR(false);
           
           setTimeout(() => {
@@ -97,20 +88,19 @@ function Login() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      setStatus(' Please fill all fields');
+      setStatus('⚠️ Please fill all fields');
       return;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      setStatus(' Invalid email format');
+      setStatus('⚠️ Invalid email format');
       return;
     }
 
     try {
       setLoading(true);
       
-      // Create session on backend (SAME AS BEFORE)
       const sessionResponse = await axios.post(`${config.API_URL}/api/session/create`, {
         sessionId,
         email,
@@ -119,7 +109,6 @@ function Login() {
       });
 
       if (sessionResponse.data.success) {
-        // SHOW QR CODE (PEHLE WALA FLOW)
         setShowQR(true);
         setStatus('📱 Scan QR code with mobile to verify face');
         setLoading(false);
@@ -133,7 +122,7 @@ function Login() {
     } catch (error) {
       setLoading(false);
       console.error('Session creation error:', error);
-      setStatus(' Failed to create session. Please try again.');
+      setStatus('❌ Failed to create session. Please try again.');
     }
   };
 
@@ -178,7 +167,6 @@ function Login() {
           {loading ? '⏳ Processing...' : '🚀 Login with Face Authentication'}
         </button>
 
-        {/* QR CODE SECTION - PEHLE WALA */}
         {showQR && (
           <div style={styles.qrSection}>
             <QRCodeSVG 
@@ -218,12 +206,12 @@ function Login() {
         {status && (
           <div style={{
             ...styles.statusBox,
-            backgroundColor: status.includes('') ? '#fee' : 
-                           status.includes('') ? '#efe' : '#fff3cd',
-            color: status.includes('') ? '#c00' : 
-                   status.includes('') ? '#0a0' : '#856404',
-            border: `2px solid ${status.includes('') ? '#fcc' : 
-                                 status.includes('') ? '#cfc' : '#ffeaa7'}`
+            backgroundColor: status.includes('❌') ? '#fee' : 
+                           status.includes('✅') ? '#efe' : '#fff3cd',
+            color: status.includes('❌') ? '#c00' : 
+                   status.includes('✅') ? '#0a0' : '#856404',
+            border: `2px solid ${status.includes('❌') ? '#fcc' : 
+                                 status.includes('✅') ? '#cfc' : '#ffeaa7'}`
           }}>
             {status}
           </div>
@@ -232,6 +220,10 @@ function Login() {
         <p style={styles.registerLink}>
           Don't have an account? {' '}
           <a href="/register" style={styles.link}>Register here</a>
+        </p>
+        
+        <p style={styles.homeLink}>
+          <a href="/" style={styles.link}>← Back to Home</a>
         </p>
       </div>
     </div>
@@ -343,6 +335,11 @@ const styles = {
     marginTop: '20px',
     textAlign: 'center',
     color: '#666',
+    fontSize: '14px'
+  },
+  homeLink: {
+    marginTop: '10px',
+    textAlign: 'center',
     fontSize: '14px'
   },
   link: {

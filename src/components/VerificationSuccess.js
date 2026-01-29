@@ -1,4 +1,4 @@
-// src/components/VerificationSuccess.jsx
+// src/components/VerificationSuccess.js
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -20,15 +20,14 @@ function VerificationSuccess() {
 
     // Auto redirect after 5 seconds
     const redirectTimer = setTimeout(() => {
-      // Check if we came from registration or login
       const urlParams = new URLSearchParams(window.location.search);
       const type = urlParams.get('type');
       
       if (type === 'register') {
         navigate('/login');
       } else {
-        // Close this window/tab or show a message
-        window.close();
+        // Try to close the window/tab
+        handleCloseWindow();
       }
     }, 5000);
 
@@ -37,6 +36,44 @@ function VerificationSuccess() {
       clearTimeout(redirectTimer);
     };
   }, [navigate]);
+
+  const handleCloseWindow = () => {
+    // Try multiple methods to close the window/tab
+    try {
+      // Method 1: Direct window.close()
+      window.close();
+      
+      // Method 2: If above doesn't work, try with setTimeout
+      setTimeout(() => {
+        window.close();
+      }, 100);
+      
+      // Method 3: For mobile browsers, navigate back
+      setTimeout(() => {
+        if (window.history.length > 1) {
+          window.history.back();
+        } else {
+          // If no history, show message to close manually
+          alert('✅ Verification complete! You can now close this tab manually.');
+        }
+      }, 200);
+    } catch (error) {
+      console.log('Close window error:', error);
+      // Fallback: Navigate back or show message
+      if (window.history.length > 1) {
+        window.history.back();
+      }
+    }
+  };
+
+  const handleBackToComputer = () => {
+    // Show instruction to return to computer
+    const message = '✅ Verification Complete!\n\nPlease return to your computer to complete the login/registration process.\n\nYou can safely close this tab now.';
+    alert(message);
+    
+    // Try to close after showing message
+    setTimeout(handleCloseWindow, 500);
+  };
 
   return (
     <div style={styles.container}>
@@ -50,7 +87,7 @@ function VerificationSuccess() {
           </div>
         </div>
 
-        <h1 style={styles.title}> Verification Successful!</h1>
+        <h1 style={styles.title}>✅ Verification Successful!</h1>
         
         <p style={styles.message}>
           Your face has been verified successfully.
@@ -58,13 +95,16 @@ function VerificationSuccess() {
 
         <div style={styles.infoBox}>
           <p style={styles.infoText}>
-            ✨ You can now return to your computer and complete the process.
+            🖥️ Return to your computer to complete the process.
+          </p>
+          <p style={styles.infoSubtext}>
+            You can close this mobile tab now.
           </p>
         </div>
 
         <div style={styles.progressContainer}>
           <div style={styles.progressText}>
-            Redirecting in {countdown} seconds...
+            Auto-closing in {countdown} seconds...
           </div>
           <div style={styles.progressBar}>
             <div 
@@ -78,27 +118,34 @@ function VerificationSuccess() {
 
         <div style={styles.buttonGroup}>
           <button
-            onClick={() => navigate('/login')}
+            onClick={handleBackToComputer}
             style={styles.primaryButton}
           >
-            🔐 Go to Login
+            🖥️ Return to Computer
           </button>
           
           <button
-            onClick={() => window.close()}
+            onClick={handleCloseWindow}
             style={styles.secondaryButton}
           >
-            ✕ Close Window
+            ✕ Close This Tab
           </button>
         </div>
 
         <div style={styles.successDetails}>
           <h3 style={styles.detailsTitle}>What's Next?</h3>
           <ul style={styles.detailsList}>
-            <li>🖥️ Return to your computer</li>
-            <li>🔑 Complete the login/registration process</li>
+            <li>🖥️ Go back to your computer</li>
+            <li>✅ Your login/registration will complete automatically</li>
             <li>🎉 You're all set!</li>
           </ul>
+        </div>
+
+        <div style={styles.mobileNote}>
+          <p style={styles.mobileNoteText}>
+            📱 <strong>Mobile Users:</strong> If this tab doesn't close automatically, 
+            you can safely close it manually. Your verification is complete!
+          </p>
         </div>
       </div>
     </div>
@@ -176,10 +223,16 @@ const styles = {
     marginBottom: '30px'
   },
   infoText: {
-    margin: 0,
+    margin: '0 0 10px 0',
     color: '#166534',
     fontSize: '16px',
     fontWeight: '600'
+  },
+  infoSubtext: {
+    margin: 0,
+    color: '#166534',
+    fontSize: '14px',
+    fontWeight: '500'
   },
   progressContainer: {
     marginBottom: '30px'
@@ -206,10 +259,12 @@ const styles = {
   buttonGroup: {
     display: 'flex',
     gap: '10px',
-    marginBottom: '30px'
+    marginBottom: '30px',
+    flexWrap: 'wrap'
   },
   primaryButton: {
     flex: 1,
+    minWidth: '200px',
     padding: '15px',
     fontSize: '16px',
     fontWeight: 'bold',
@@ -223,6 +278,7 @@ const styles = {
   },
   secondaryButton: {
     flex: 1,
+    minWidth: '200px',
     padding: '15px',
     fontSize: '16px',
     fontWeight: 'bold',
@@ -238,7 +294,8 @@ const styles = {
     padding: '20px',
     borderRadius: '12px',
     border: '1px solid #e2e8f0',
-    textAlign: 'left'
+    textAlign: 'left',
+    marginBottom: '20px'
   },
   detailsTitle: {
     fontSize: '18px',
@@ -253,6 +310,18 @@ const styles = {
     color: '#64748b',
     lineHeight: '2',
     fontSize: '15px'
+  },
+  mobileNote: {
+    backgroundColor: '#fff3cd',
+    padding: '15px',
+    borderRadius: '10px',
+    border: '2px solid #ffc107'
+  },
+  mobileNoteText: {
+    margin: 0,
+    fontSize: '13px',
+    color: '#856404',
+    lineHeight: '1.6'
   }
 };
 
@@ -277,6 +346,12 @@ styleSheet.innerText = `
   @keyframes fill {
     100% {
       box-shadow: inset 0px 0px 0px 30px #4CAF50;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .buttonGroup {
+      flex-direction: column;
     }
   }
 `;
