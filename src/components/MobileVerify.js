@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable react-hooks/exhaustive-deps */
 // src/components/MobileVerify.js
-// 🔥 ULTRA OPTIMIZED - GUARANTEED FIRST TIME DETECTION 🔥
+// 🔥 FINAL FIX - GREEN DOTS GUARANTEED! 🔥
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -19,8 +19,8 @@ function MobileVerify() {
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const detectionIntervalRef = useRef(null);
-  const retryCountRef = useRef(0);
   const isDetectingRef = useRef(false);
+  const videoReadyFiredRef = useRef(false); // 🔥 PREVENT MULTIPLE CALLS
 
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [status, setStatus] = useState('🔄 Initializing...');
@@ -37,7 +37,7 @@ function MobileVerify() {
   };
 
   const cleanup = () => {
-    console.log('[CLEANUP] Starting cleanup...');
+    console.log('[CLEANUP] Starting...');
     
     if (detectionIntervalRef.current) {
       clearInterval(detectionIntervalRef.current);
@@ -45,10 +45,7 @@ function MobileVerify() {
     }
     
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => {
-        track.stop();
-        console.log('[CLEANUP] Stopped track:', track.kind);
-      });
+      streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
     
@@ -57,13 +54,12 @@ function MobileVerify() {
     }
     
     isDetectingRef.current = false;
+    videoReadyFiredRef.current = false;
   };
 
   const fetchSessionData = useCallback(async () => {
     try {
       setStatus('📥 Loading session...');
-      console.log('[SESSION] Fetching for:', sessionId);
-      
       const response = await axios.get(`${config.API_URL}/api/session/${sessionId}`);
       
       if (response.data.success) {
@@ -74,11 +70,10 @@ function MobileVerify() {
         });
         loadModels();
       } else {
-        console.log('[SESSION] ❌ Expired');
         setStatus('❌ Session expired');
       }
     } catch (error) {
-      console.error('[SESSION] ❌ Error:', error);
+      console.error('[SESSION] Error:', error);
       setStatus('❌ Failed to load session');
     }
   }, [sessionId]);
@@ -86,25 +81,22 @@ function MobileVerify() {
   const loadModels = async () => {
     try {
       setStatus('📦 Loading AI models...');
-      console.log('[MODELS] Starting load...');
+      console.log('[MODELS] Loading...');
       
       const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
       
-      // Load all models in parallel
       await Promise.all([
         faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
         faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
         faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
       ]);
       
-      console.log('[MODELS] ✅ ALL LOADED!');
+      console.log('[MODELS] ✅ LOADED');
       setModelsLoaded(true);
-      
-      // Start camera immediately
       startCamera();
       
     } catch (error) {
-      console.error('[MODELS] ❌ Failed:', error);
+      console.error('[MODELS] Failed:', error);
       setStatus('❌ Failed to load AI');
     }
   };
@@ -113,93 +105,97 @@ function MobileVerify() {
     try {
       cleanup();
       
-      console.log('[CAMERA] Starting with mode:', facingMode);
+      console.log('[CAMERA] Starting...');
       setStatus('📸 Starting camera...');
 
-      const constraints = {
+      const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: facingMode,
           width: { ideal: 640 },
           height: { ideal: 480 }
         }
-      };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      });
       
-      console.log('[CAMERA] ✅ Stream obtained');
+      console.log('[CAMERA] ✅ Stream ready');
       streamRef.current = stream;
 
-      if (!videoRef.current) {
-        console.log('[CAMERA] ❌ Video ref null');
-        return;
-      }
+      if (!videoRef.current) return;
 
       videoRef.current.srcObject = stream;
       videoRef.current.setAttribute('playsinline', 'true');
       videoRef.current.muted = true;
       
-      // 🔥 CRITICAL FIX: Use multiple event listeners
-      const handleVideoReady = async () => {
-        console.log('[VIDEO] ✅ Ready event fired');
+      // 🔥 FIX: USE ONLY ONE EVENT LISTENER
+      videoRef.current.onloadedmetadata = async () => {
+        // 🔥 PREVENT MULTIPLE CALLS
+        if (videoReadyFiredRef.current) {
+          console.log('[VIDEO] Already initialized, skipping...');
+          return;
+        }
+        videoReadyFiredRef.current = true;
         
-        // Set canvas dimensions
+        console.log('[VIDEO] ✅ Metadata loaded (ONCE)');
+        
+        // Set canvas size
         if (canvasRef.current && videoRef.current) {
-          canvasRef.current.width = videoRef.current.videoWidth || 640;
-          canvasRef.current.height = videoRef.current.videoHeight || 480;
-          console.log('[CANVAS] Dimensions:', canvasRef.current.width, 'x', canvasRef.current.height);
+          const width = videoRef.current.videoWidth || 640;
+          const height = videoRef.current.videoHeight || 480;
+          canvasRef.current.width = width;
+          canvasRef.current.height = height;
+          console.log('[CANVAS] Size set:', width, 'x', height);
         }
         
-        // 🔥 TRIPLE WAIT for video stability
-        console.log('[VIDEO] ⏳ Waiting for stability (2 seconds)...');
+        // Play video
+        try {
+          await videoRef.current.play();
+          console.log('[VIDEO] ✅ Playing');
+        } catch (err) {
+          console.error('[VIDEO] Play error:', err);
+        }
+        
+        // 🔥 Wait for video to fully stabilize
+        console.log('[VIDEO] ⏳ Waiting 2 seconds...');
         await new Promise(resolve => setTimeout(resolve, 2000));
-        console.log('[VIDEO] ✅ Stable - starting detection');
+        console.log('[VIDEO] ✅ READY');
         
         setVideoReady(true);
-        setStatus('✨ Ready! Position your face');
+        setStatus('✨ Position your face');
+        
+        // Start detection
         startDetection();
       };
 
-      // Try multiple events for maximum compatibility
-      videoRef.current.onloadedmetadata = handleVideoReady;
-      videoRef.current.onloadeddata = handleVideoReady;
-      videoRef.current.oncanplay = handleVideoReady;
-      
-      // Force play
-      try {
-        await videoRef.current.play();
-        console.log('[VIDEO] ✅ Playing');
-      } catch (err) {
-        console.error('[VIDEO] Play error:', err);
-      }
-
     } catch (error) {
-      console.error('[CAMERA] ❌ Error:', error);
-      setStatus('❌ Camera access denied');
+      console.error('[CAMERA] Error:', error);
+      setStatus('❌ Camera denied');
     }
   };
 
   const startDetection = () => {
     if (isDetectingRef.current) {
-      console.log('[DETECTION] Already running');
+      console.log('[DETECTION] ⚠️ Already running');
       return;
     }
 
     isDetectingRef.current = true;
-    console.log('[DETECTION] 🚀 STARTING...');
+    console.log('[DETECTION] 🚀 STARTING NOW...');
     
     let frameCount = 0;
-    let consecutiveDetections = 0;
     
-    // 🔥 USE VERY FREQUENT INTERVAL FOR FAST DETECTION
     detectionIntervalRef.current = setInterval(async () => {
-      if (capturing || !modelsLoaded || !videoRef.current || !canvasRef.current) {
+      // Skip if already capturing
+      if (capturing) return;
+      
+      // Check refs exist
+      if (!videoRef.current || !canvasRef.current) {
+        console.log('[DETECTION] ⚠️ Missing refs');
         return;
       }
 
-      // Check video readiness
+      // Check video is ready
       if (videoRef.current.readyState < 2) {
-        if (frameCount % 20 === 0) {
-          console.log('[DETECTION] ⏳ Waiting for video...');
+        if (frameCount === 0) {
+          console.log('[DETECTION] ⏳ Waiting for video ready...');
         }
         frameCount++;
         return;
@@ -208,15 +204,10 @@ function MobileVerify() {
       try {
         frameCount++;
         
-        // Log every 10 frames
-        if (frameCount % 10 === 1) {
-          console.log('[DETECTION] 🔍 Frame', frameCount, '- Detecting...');
-        }
-
-        // 🔥 AGGRESSIVE DETECTION with LOW THRESHOLD
+        // Detect face
         const detection = await faceapi
           .detectSingleFace(videoRef.current, new faceapi.SsdMobilenetv1Options({ 
-            minConfidence: 0.3  // Lower threshold for easier detection
+            minConfidence: 0.3
           }))
           .withFaceLandmarks()
           .withFaceDescriptor();
@@ -224,16 +215,19 @@ function MobileVerify() {
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         
-        // Always clear canvas
+        // 🔥 CRITICAL: Always clear canvas FIRST
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         if (detection) {
-          consecutiveDetections++;
+          // Log first detection
+          if (!faceDetected) {
+            console.log('🎉🎉🎉 FIRST FACE DETECTED! 🎉🎉🎉');
+          }
           
-          // Log detection
-          if (!faceDetected || frameCount % 10 === 0) {
-            const confidence = Math.round(detection.detection.score * 100);
-            console.log(`[DETECTION] 🎉 FACE FOUND! Frame: ${frameCount}, Confidence: ${confidence}%`);
+          // Log every 30 frames
+          if (frameCount % 30 === 1) {
+            const conf = Math.round(detection.detection.score * 100);
+            console.log(`[DETECTION] Frame ${frameCount}, Confidence: ${conf}%`);
           }
           
           setFaceDetected(true);
@@ -242,84 +236,91 @@ function MobileVerify() {
           const box = detection.detection.box;
           const confidence = Math.round(detection.detection.score * 100);
           
-          // 🔥 DRAW BRIGHT GREEN BOX
+          // 🔥 DRAW GREEN BOX (THICK & BRIGHT)
           ctx.strokeStyle = '#00ff00';
-          ctx.lineWidth = 4;
+          ctx.lineWidth = 5;
           ctx.strokeRect(box.x, box.y, box.width, box.height);
           
-          // 🔥 DRAW CORNER BRACKETS (BIGGER & BRIGHTER)
-          const cornerLength = 30;
-          ctx.lineWidth = 6;
+          // 🔥 DRAW BIG CORNER BRACKETS
+          const cornerLen = 35;
+          ctx.lineWidth = 7;
+          ctx.strokeStyle = '#00ff00';
           
           // Top-left
           ctx.beginPath();
-          ctx.moveTo(box.x, box.y + cornerLength);
+          ctx.moveTo(box.x, box.y + cornerLen);
           ctx.lineTo(box.x, box.y);
-          ctx.lineTo(box.x + cornerLength, box.y);
+          ctx.lineTo(box.x + cornerLen, box.y);
           ctx.stroke();
           
           // Top-right
           ctx.beginPath();
-          ctx.moveTo(box.x + box.width - cornerLength, box.y);
+          ctx.moveTo(box.x + box.width - cornerLen, box.y);
           ctx.lineTo(box.x + box.width, box.y);
-          ctx.lineTo(box.x + box.width, box.y + cornerLength);
+          ctx.lineTo(box.x + box.width, box.y + cornerLen);
           ctx.stroke();
           
           // Bottom-left
           ctx.beginPath();
-          ctx.moveTo(box.x, box.y + box.height - cornerLength);
+          ctx.moveTo(box.x, box.y + box.height - cornerLen);
           ctx.lineTo(box.x, box.y + box.height);
-          ctx.lineTo(box.x + cornerLength, box.y + box.height);
+          ctx.lineTo(box.x + cornerLen, box.y + box.height);
           ctx.stroke();
           
           // Bottom-right
           ctx.beginPath();
-          ctx.moveTo(box.x + box.width - cornerLength, box.y + box.height);
+          ctx.moveTo(box.x + box.width - cornerLen, box.y + box.height);
           ctx.lineTo(box.x + box.width, box.y + box.height);
-          ctx.lineTo(box.x + box.width, box.y + box.height - cornerLength);
+          ctx.lineTo(box.x + box.width, box.y + box.height - cornerLen);
           ctx.stroke();
           
-          // 🔥 DRAW BRIGHT GREEN LANDMARKS (LARGER DOTS)
+          // 🔥🔥🔥 DRAW BRIGHT GREEN LANDMARKS (BIG DOTS) 🔥🔥🔥
           if (detection.landmarks) {
+            console.log('[DRAW] Drawing', detection.landmarks.positions.length, 'landmarks');
+            
             ctx.fillStyle = '#00ff00';
             ctx.shadowColor = '#00ff00';
-            ctx.shadowBlur = 6;
+            ctx.shadowBlur = 8;
             
-            detection.landmarks.positions.forEach(point => {
+            detection.landmarks.positions.forEach((point, idx) => {
               ctx.beginPath();
-              ctx.arc(point.x, point.y, 3, 0, 2 * Math.PI);
+              ctx.arc(point.x, point.y, 4, 0, 2 * Math.PI); // 🔥 BIG DOTS: 4px radius
               ctx.fill();
+              
+              // Log first few landmarks
+              if (frameCount === 1 && idx < 3) {
+                console.log(`[LANDMARK ${idx}] x=${point.x}, y=${point.y}`);
+              }
             });
             
             ctx.shadowBlur = 0;
           }
           
-          // 🔥 DRAW CONFIDENCE (LARGER & BRIGHTER)
+          // Draw confidence
           ctx.fillStyle = '#00ff00';
-          ctx.font = 'bold 20px Arial';
+          ctx.font = 'bold 22px Arial';
           ctx.shadowColor = 'black';
-          ctx.shadowBlur = 4;
-          ctx.fillText(`${confidence}%`, box.x + 5, box.y - 10);
+          ctx.shadowBlur = 5;
+          ctx.fillText(`${confidence}%`, box.x + 10, box.y - 10);
           ctx.shadowBlur = 0;
           
         } else {
-          // No face detected
+          // No face
           if (faceDetected) {
-            consecutiveDetections = 0;
-            console.log('[DETECTION] ⚠️ Lost face');
+            console.log('[DETECTION] ⚠️ Face lost');
           }
           setFaceDetected(false);
           setCurrentDetection(null);
         }
 
       } catch (err) {
-        console.error('[DETECTION] ❌ Error:', err);
+        console.error('[DETECTION] Error:', err);
       }
-    }, 50); // 🔥 VERY FAST: 50ms = 20 times per second
+    }, 50); // 20 times per second
   };
 
   const switchCamera = async () => {
-    console.log('[CAMERA] 🔄 Switching...');
+    console.log('[CAMERA] Switching...');
     
     const newMode = facingMode === 'user' ? 'environment' : 'user';
     setFacingMode(newMode);
@@ -329,26 +330,22 @@ function MobileVerify() {
     
     cleanup();
     
-    setStatus('🔄 Switching camera...');
+    setStatus('🔄 Switching...');
     await new Promise(r => setTimeout(r, 300));
     
     await startCamera();
   };
 
   const captureFace = async () => {
-    if (!currentDetection || capturing) {
-      console.log('[CAPTURE] ⚠️ No detection or already capturing');
-      return;
-    }
+    if (!currentDetection || capturing) return;
 
     setCapturing(true);
     setStatus('📸 Capturing...');
-    console.log('[CAPTURE] Starting...');
+    console.log('[CAPTURE] Sending...');
 
     try {
       const descriptor = Array.from(currentDetection.descriptor);
       
-      console.log('[CAPTURE] Sending to backend...');
       socket.emit('face-captured', {
         sessionId: sessionData.sessionId,
         faceDescriptor: descriptor,
@@ -359,16 +356,15 @@ function MobileVerify() {
 
       cleanup();
       setStatus('⏳ Verifying...');
-      console.log('[CAPTURE] ✅ Sent');
 
       setTimeout(() => {
         navigate('/verification-success?type=' + sessionData.type);
       }, 2000);
 
     } catch (err) {
-      console.error('[CAPTURE] ❌ Error:', err);
+      console.error('[CAPTURE] Error:', err);
       setCapturing(false);
-      setStatus('❌ Failed to capture');
+      setStatus('❌ Failed');
     }
   };
 
@@ -380,12 +376,11 @@ function MobileVerify() {
     }
     
     if (!socket) {
-      console.log('[SOCKET] Connecting...');
       socket = io(config.API_URL);
     }
     
     return () => {
-      console.log('[UNMOUNT] Cleaning up...');
+      console.log('[UNMOUNT] Cleanup');
       cleanup();
     };
   }, [sessionId]);
@@ -420,7 +415,7 @@ function MobileVerify() {
           {!modelsLoaded && (
             <div style={styles.overlay}>
               <div style={styles.spinner}></div>
-              <p style={styles.overlayText}>Loading AI Models...</p>
+              <p style={styles.overlayText}>Loading AI...</p>
             </div>
           )}
 
@@ -435,7 +430,7 @@ function MobileVerify() {
               ...styles.indicator,
               backgroundColor: faceDetected ? '#4CAF50' : '#FF9800'
             }}>
-              {faceDetected ? '✅ Face Detected!' : '⚠️ Position Your Face'}
+              {faceDetected ? '✅ FACE DETECTED!' : '⚠️ Position Face'}
             </div>
           )}
         </div>
@@ -457,13 +452,12 @@ function MobileVerify() {
         </div>
 
         <div style={styles.instructions}>
-          <p style={styles.instructionTitle}>💡 Tips for Best Results:</p>
+          <p style={styles.instructionTitle}>💡 Tips:</p>
           <ul style={styles.instructionList}>
-            <li>✅ Face camera directly</li>
-            <li>💡 Ensure good lighting</li>
-            <li>⏱️ Wait 2-3 seconds after camera opens</li>
-            <li>🎯 Center your face in frame</li>
-            <li>👓 Remove glasses if detection fails</li>
+            <li>Face camera directly</li>
+            <li>Good lighting needed</li>
+            <li>Wait 2-3 seconds after opening</li>
+            <li>Green dots = landmarks detected</li>
           </ul>
         </div>
       </div>
@@ -533,7 +527,8 @@ const styles = {
     left: 0,
     width: '100%',
     height: '100%',
-    transform: 'scaleX(-1)'
+    transform: 'scaleX(-1)',
+    pointerEvents: 'none'
   },
   overlay: {
     position: 'absolute',
@@ -580,10 +575,10 @@ const styles = {
     bottom: '10px',
     left: '50%',
     transform: 'translateX(-50%)',
-    padding: '8px 20px',
-    borderRadius: '20px',
+    padding: '10px 25px',
+    borderRadius: '25px',
     color: 'white',
-    fontSize: '14px',
+    fontSize: '15px',
     fontWeight: 'bold',
     boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
     zIndex: 10
