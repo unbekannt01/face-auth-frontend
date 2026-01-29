@@ -19,7 +19,7 @@ function MobileScanner() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { 
-          facingMode: 'environment', // Back camera
+          facingMode: { ideal: 'environment' }, // Back camera with fallback
           width: { ideal: 1280 },
           height: { ideal: 720 }
         }
@@ -27,11 +27,23 @@ function MobileScanner() {
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.setAttribute('playsinline', true);
-        videoRef.current.play();
-        setCameraActive(true);
-        setStatus('📷 Camera ready! Scan QR code');
-        requestAnimationFrame(scanQRCode);
+        videoRef.current.setAttribute('playsinline', 'true');
+        
+        // Wait for video to be ready before scanning
+        const handleCanPlay = () => {
+          console.log('[v0] Video ready, starting scan');
+          setCameraActive(true);
+          setStatus('📷 Camera ready! Scan QR code');
+          videoRef.current.removeEventListener('canplay', handleCanPlay);
+          requestAnimationFrame(scanQRCode);
+        };
+        
+        videoRef.current.addEventListener('canplay', handleCanPlay);
+        
+        videoRef.current.play().catch(err => {
+          console.error('Play error:', err);
+          setStatus('❌ Failed to start camera');
+        });
       }
     } catch (error) {
       console.error('Camera error:', error);

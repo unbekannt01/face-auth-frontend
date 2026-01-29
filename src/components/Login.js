@@ -21,7 +21,7 @@ function Login() {
   useEffect(() => {
     // Listen for face verification from mobile
     socket.on('face-verification-complete', async (data) => {
-      console.log('Face verification result:', data);
+      console.log('[v0] Face verification result:', data);
       
       if (data.sessionId === sessionId) {
         if (data.success) {
@@ -29,12 +29,19 @@ function Login() {
           setLoading(true);
 
           try {
+            // Wait a moment for server to update session status
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            console.log('[v0] Completing login for session:', sessionId);
+            
             // FIXED: Use the CORRECT backend endpoint that EXISTS
             // Original code tried to use /api/auth/verify-login which doesn't exist
             // The correct endpoint is /api/auth/login/complete
             const response = await axios.post(`${config.API_URL}/api/auth/login/complete`, {
               sessionId: sessionId
             });
+
+            console.log('[v0] Login complete response:', response.data);
 
             if (response.data.success) {
               localStorage.setItem('authToken', response.data.token);
@@ -50,7 +57,7 @@ function Login() {
             }
           } catch (error) {
             setLoading(false);
-            console.error('Login error:', error);
+            console.error('[v0] Login error:', error);
             
             const errorMsg = error.response?.data?.message || 
                            error.message || 

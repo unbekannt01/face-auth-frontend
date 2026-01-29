@@ -122,7 +122,7 @@ function MobileVerify() {
 
       const constraints = {
         video: {
-          facingMode: facingMode,
+          facingMode: { ideal: facingMode },
           width: { ideal: 1280 },
           height: { ideal: 720 }
         }
@@ -135,29 +135,29 @@ function MobileVerify() {
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.setAttribute('playsinline', 'true');
         
-        // ✅ FIX: Use proper event listener
-        const handleLoadedMetadata = () => {
-          console.log('📹 Video metadata loaded');
-          
-          videoRef.current.play()
-            .then(() => {
-              console.log('✅ Video playing');
-              
-              // ✅ FIX: Wait for video to actually start
-              setTimeout(() => {
-                setVideoReady(true);
-                setStatus('✅ Ready! Position your face');
-                startFaceDetection();
-              }, 1000); // Give 1 second for video to stabilize
-            })
-            .catch(err => {
-              console.error('Video play error:', err);
-              setStatus('❌ Failed to start video');
-            });
+        // Better video readiness detection
+        const checkVideoReady = () => {
+          if (videoRef.current && videoRef.current.readyState >= 2) { // HAVE_CURRENT_DATA or better
+            console.log('📹 Video ready with state:', videoRef.current.readyState);
+            setVideoReady(true);
+            setStatus('✅ Ready! Position your face');
+            startFaceDetection();
+          } else {
+            setTimeout(checkVideoReady, 100);
+          }
         };
 
-        videoRef.current.addEventListener('loadedmetadata', handleLoadedMetadata, { once: true });
+        videoRef.current.play()
+          .then(() => {
+            console.log('✅ Video playing');
+            checkVideoReady();
+          })
+          .catch(err => {
+            console.error('Video play error:', err);
+            setStatus('❌ Failed to start video');
+          });
       }
     } catch (error) {
       console.error('Camera error:', error);
@@ -187,25 +187,30 @@ function MobileVerify() {
       clearInterval(detectionIntervalRef.current);
     }
 
-    // ✅ FIX: Reduce detection interval for faster response
-    detectionIntervalRef.current = setInterval(async () => {
-      if (videoRef.current && videoReady && !capturing && modelsLoaded && !isProcessingRef.current) {
-        try {
-          isProcessingRef.current = true;
-          
-          const detection = await faceapi
-            .detectSingleFace(videoRef.current, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
-            .withFaceLandmarks();
+    // Start detection with a small initial delay to ensure models are ready
+    setTimeout(() => {
+      detectionIntervalRef.current = setInterval(async () => {
+        if (videoRef.current && videoReady && !capturing && modelsLoaded && !isProcessingRef.current) {
+          try {
+            isProcessingRef.current = true;
+            
+            // Check video state before detection
+            if (videoRef.current.readyState >= 2) { // HAVE_CURRENT_DATA
+              const detection = await faceapi
+                .detectSingleFace(videoRef.current, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
+                .withFaceLandmarks();
 
-          setFaceDetected(!!detection);
-          
-          isProcessingRef.current = false;
-        } catch (error) {
-          isProcessingRef.current = false;
-          // Silently ignore detection errors
+              setFaceDetected(!!detection);
+            }
+            
+            isProcessingRef.current = false;
+          } catch (error) {
+            isProcessingRef.current = false;
+            console.log('[v0] Detection iteration skip:', error.message);
+          }
         }
-      }
-    }, 300); // ✅ FIX: Faster detection (was 500ms)
+      }, 300); // Detection interval
+    }, 200); // Initial delay before starting detection
   };
 
   useEffect(() => {
@@ -227,7 +232,7 @@ function MobileVerify() {
 
   const captureFace = async () => {
     if (!modelsLoaded || capturing || !sessionData || !videoReady) {
-      console.log('Capture blocked:', { modelsLoaded, capturing, sessionData: !!sessionData, videoReady });
+      console.log('[v0] Capture blocked:', { modelsLoaded, capturing, sessionData: !!sessionData, videoReady });
       return;
     }
 
@@ -235,6 +240,11 @@ function MobileVerify() {
     setStatus('🔍 Detecting and capturing face...');
 
     try {
+      // Verify video is in correct state
+      if (!videoRef.current || videoRef.current.readyState < 2) {
+        throw new Error('Video not ready');
+      }
+
       const detections = await faceapi
         .detectSingleFace(videoRef.current, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
         .withFaceLandmarks()
@@ -243,7 +253,7 @@ function MobileVerify() {
       if (detections) {
         const faceDescriptor = Array.from(detections.descriptor);
         
-        console.log('✅ Face captured, descriptor length:', faceDescriptor.length);
+        console.log('[v0] Face captured, descriptor length:', faceDescriptor.length);
         setStatus('✅ Face captured! Verifying with registered face...');
 
         // Send to backend for verification
@@ -256,9 +266,9 @@ function MobileVerify() {
             type: sessionData.type
           });
 
-          console.log('📤 Face data sent to server');
+          console.log('[v0] Face data sent to server');
         } else {
-          console.error('❌ Socket not connected!');
+          console.error('[v0] Socket not connected!');
           setStatus('❌ Connection error. Please try again.');
           setCapturing(false);
           return;
@@ -282,7 +292,7 @@ function MobileVerify() {
         setCapturing(false);
       }
     } catch (error) {
-      console.error('Face detection error:', error);
+      console.error('[v0] Face detection error:', error);
       setStatus('❌ Detection failed. Please try again.');
       setCapturing(false);
     }
