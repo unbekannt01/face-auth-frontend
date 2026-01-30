@@ -1,70 +1,277 @@
-# Getting Started with Create React App
+# Face Authentication System - Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A modern, secure face authentication system built with React that enables password-less login using AI-powered facial recognition and QR code verification.
 
-## Available Scripts
+## 🌟 Features
 
-In the project directory, you can run:
+- **AI-Powered Face Recognition** - Real-time face detection using face-api.js
+- **QR Code Authentication** - Secure mobile verification workflow
+- **Modern UI/UX** - Beautiful gradient design with smooth animations
+- **Multi-Device Support** - Seamless desktop-to-mobile authentication flow
+- **Real-time Detection** - Live face landmark visualization with green indicators
+- **Camera Controls** - Front/back camera switching for mobile devices
+- **Session Management** - Secure temporary session handling
+- **Socket.io Integration** - Real-time communication between devices
 
-### `npm start`
+## 🎯 Tech Stack
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **React 19.2.4** - Modern UI framework
+- **React Router 7.13.0** - Client-side routing
+- **face-api.js 0.22.2** - Face detection and recognition
+- **Socket.io Client 4.8.3** - Real-time bidirectional communication
+- **QRCode.react 4.2.0** - QR code generation
+- **jsQR 1.4.0** - QR code scanning
+- **Axios 1.13.4** - HTTP client
+- **CRACO 7.1.0** - Custom webpack configuration
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## 📋 Prerequisites
 
-### `npm test`
+- Node.js >= 18.x
+- npm or yarn
+- Modern web browser with camera access
+- Backend server running (see Backend README)
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## 🚀 Installation
 
-### `npm run build`
+1. **Clone the repository**
+```bash
+git clone <repository-url>
+cd face-auth-system
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+2. **Install dependencies**
+```bash
+npm install
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+3. **Configure environment variables**
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Create a `.env` file in the root directory:
 
-### `npm run eject`
+```env
+REACT_APP_API_URL=http://localhost:5000
+REACT_APP_APP_URL=http://localhost:3000
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+For production:
+```env
+REACT_APP_API_URL=https://your-backend-url.com
+REACT_APP_APP_URL=https://your-frontend-url.com
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+4. **Start development server**
+```bash
+npm start
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+The app will open at `http://localhost:3000`
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## 🏗️ Project Structure
 
-## Learn More
+```
+src/
+├── components/
+│   ├── AppLoader.js           # App loading screen
+│   ├── Dashboard.js           # User dashboard
+│   ├── FaceCapture.js         # Face capture component
+│   ├── Home.js                # Landing page
+│   ├── Login.js               # Login page with QR
+│   ├── MobileScanner.js       # QR scanner for mobile
+│   ├── MobileVerify.js        # Mobile face verification
+│   ├── Register.js            # Registration flow
+│   ├── RouteLoader.js         # Route transition loader
+│   ├── VerificationSuccess.js # Success page
+│   └── loader.css             # Loader animations
+├── services/
+│   └── api.js                 # API service layer
+├── utils/
+│   └── faceDetection.js       # Face detection utilities
+├── config.js                  # Configuration management
+├── App.js                     # Main app component
+├── App.css                    # Global styles
+└── index.js                   # Entry point
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## 🔐 Authentication Flow
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### Registration Flow
+1. User enters email, password, and name on desktop
+2. System generates QR code with session ID
+3. User scans QR code with mobile camera
+4. Mobile captures and verifies face with AI
+5. Face descriptor sent to backend
+6. Account created and user redirected to login
 
-### Code Splitting
+### Login Flow
+1. User enters email and password on desktop
+2. System generates QR code with session ID
+3. User scans QR code with mobile device
+4. Mobile captures face and sends to backend
+5. Backend compares face with stored descriptor
+6. On match, user is logged in automatically
+7. JWT token stored in localStorage
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## 🎨 Key Components
 
-### Analyzing the Bundle Size
+### FaceCapture Component
+- Real-time face detection with bounding boxes
+- 68-point facial landmark detection
+- Green visual indicators for detected landmarks
+- Face validation (size, position, confidence)
+- Descriptor extraction for authentication
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+### MobileVerify Component
+- Camera stream initialization
+- Face detection with visual feedback
+- Corner bracket UI for face framing
+- Front/back camera switching
+- Real-time confidence display
+- Socket.io communication with desktop
 
-### Making a Progressive Web App
+### QR Code System
+- Unique session ID generation using UUID
+- QRCodeSVG for high-quality codes
+- Manual link fallback option
+- Session expiration (10 minutes)
+- Real-time status updates
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+## 🛠️ Configuration
 
-### Advanced Configuration
+### Face Detection Settings
+Located in `src/utils/faceDetection.js`:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+```javascript
+// Detection confidence threshold
+minConfidence: 0.5
 
-### Deployment
+// Face comparison threshold
+threshold: 0.6
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+// Minimum face size (pixels)
+minSize: 80
 
-### `npm run build` fails to minify
+// Maximum face size (pixels)
+maxSize: 500
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+### Camera Settings
+```javascript
+// Video constraints
+video: {
+  facingMode: 'user', // or 'environment'
+  width: { ideal: 640 },
+  height: { ideal: 480 }
+}
+```
+
+## 📱 Mobile Optimization
+
+- Responsive design for all screen sizes
+- Touch-optimized controls
+- Camera permission handling
+- Auto-redirect after verification
+- Mobile-specific QR scanner
+- Portrait/landscape support
+
+## 🔒 Security Features
+
+- JWT token-based authentication
+- Secure face descriptor transmission
+- Session expiration handling
+- HTTPS recommended for production
+- CORS protection
+- Input validation
+
+## 🚢 Deployment
+
+### Build for Production
+```bash
+npm run build
+```
+
+### Deploy to Vercel
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+# Deploy
+vercel
+```
+
+The `vercel.json` configuration is already included.
+
+### Environment Variables on Vercel
+Set these in your Vercel project settings:
+- `REACT_APP_API_URL` - Your backend URL
+- `REACT_APP_APP_URL` - Your frontend URL
+
+## 🐛 Troubleshooting
+
+### Camera Not Working
+- Check browser permissions (chrome://settings/content/camera)
+- Ensure HTTPS in production (HTTP only works on localhost)
+- Try different browsers (Chrome recommended)
+
+### Face Detection Not Working
+- Ensure good lighting conditions
+- Position face 2-3 feet from camera
+- Wait 2-3 seconds for models to load
+- Check browser console for errors
+
+### QR Code Not Scanning
+- Ensure good lighting on QR code
+- Try manual link option
+- Check mobile camera permissions
+- Verify backend is running
+
+### Socket Connection Issues
+- Check CORS configuration
+- Verify backend URL in .env
+- Ensure Socket.io server is running
+- Check browser console for errors
+
+## 📊 Performance
+
+- Initial bundle size: ~2MB (including face-api models)
+- Face detection: 20 FPS (50ms interval)
+- Model load time: 2-3 seconds
+- QR code generation: <100ms
+
+## 🧪 Testing
+
+```bash
+# Run tests
+npm test
+
+# Run with coverage
+npm test -- --coverage
+```
+
+## 📝 Scripts
+
+- `npm start` - Start development server
+- `npm run build` - Build for production
+- `npm test` - Run tests
+- `npm run eject` - Eject from Create React App
+
+## 🤝 Browser Support
+
+- Chrome/Edge 90+
+- Firefox 88+
+- Safari 14+
+- Mobile browsers with camera support
+
+## 🙏 Acknowledgments
+
+- [face-api.js](https://github.com/justadudewhohacks/face-api.js) - Face detection library
+- [Create React App](https://create-react-app.dev/) - React starter
+- [QRCode.react](https://github.com/zpao/qrcode.react) - QR code generation
+- [Socket.io](https://socket.io/) - Real-time communication
+
+## 📞 Support
+
+For issues and questions, please open a GitHub issue.
+
+---
+
+**Note**: This is a demo project for educational purposes. For production use, implement additional security measures and conduct thorough security audits.
