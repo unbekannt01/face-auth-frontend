@@ -274,7 +274,7 @@ function Dashboard() {
             color="#4caf50"
           />
           <StatCard
-            icon=""
+            icon="👤"
             title="Account Status"
             value="Active"
             color="#2196f3"
@@ -314,7 +314,7 @@ function Dashboard() {
           >
             <ActionButton
               label="🔄 Update Face Data"
-              onClick={() => alert("🚧 Under Development!")}
+              onClick={() => navigate("/update-face")}
             />
 
             <ActionButton
