@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import RouteLoader from './components/RouteLoader';
@@ -8,6 +10,7 @@ import Login from './components/Login';
 import Register from './components/Register';
 import Dashboard from './components/Dashboard';
 import MobileVerify from './components/MobileVerify';
+import MobileUpdateFace from './components/MobileUpdateFace';
 import VerificationSuccess from './components/VerificationSuccess';
 import UpdateFaceData from './components/UpdateFaceData';
 import ChangePassword from './components/ChangePassword';
@@ -31,6 +34,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/mobile-verify/:sessionId" element={<MobileVerify />} />
+          <Route path="/mobile-update-face/:sessionId" element={<MobileUpdateFace />} />
           <Route path="/verification-success" element={<VerificationSuccess />} />
           <Route path="/update-face" element={<UpdateFaceData />} />
           <Route path="/change-password" element={<ChangePassword />} />

@@ -1,26 +1,46 @@
+/* eslint-disable no-unused-vars */
 'use client';
 
 /* eslint-disable react-hooks/exhaustive-deps */
 // src/components/UpdateFaceData.js
 import React, { useRef, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import * as faceapi from 'face-api.js';
 import axios from 'axios';
+import QRCode from 'qrcode';
 import { config } from '../config';
-import faceDetectionService from '../utils/faceDetection';
+import io from 'socket.io-client';
+
+let socket = null;
 
 function UpdateFaceData() {
   const navigate = useNavigate();
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const qrRef = useRef(null);
+  const videoRef = useRef(null); // Declare videoRef
+  const canvasRef = useRef(null); // Declare canvasRef
+  const [sessionId, setSessionId] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [faceDetected, setFaceDetected] = useState(false);
-  const [stream, setStream] = useState(null);
-  const [capturing, setCapturing] = useState(false);
   const [success, setSuccess] = useState('');
-  const [showConfirmation, setShowConfirmation] = useState(false);
-  const [newDescriptor, setNewDescriptor] = useState(null);
+  const [status, setStatus] = useState('Generating QR code...');
+  const [showQR, setShowQR] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [faceDetected, setFaceDetected] = useState(false); // Declare faceDetected
+  const [stream, setStream] = useState(null); // Declare stream
+  const [capturing, setCapturing] = useState(false); // Declare capturing
+  const [newDescriptor, setNewDescriptor] = useState(null); // Declare newDescriptor
+  const [showConfirmation, setShowConfirmation] = useState(false); // Declare showConfirmation
+
+  const handleConfirmUpdate = async () => {
+    // Logic to confirm face update
+  };
+
+  const handleCancel = () => {
+    // Logic to cancel face update
+  };
+
+  const handleCapture = () => {
+    // Logic to capture new face
+  };
 
   useEffect(() => {
     // Check if user is logged in
@@ -30,252 +50,96 @@ function UpdateFaceData() {
       return;
     }
 
-    startVideo();
+    // Initialize socket
+    if (!socket) {
+      socket = io(config.API_URL);
+      
+      socket.on('face-verification-complete', (data) => {
+        console.log('[UpdateFace] Verification complete:', data);
+        if (data.success) {
+          setSuccess('✅ Face updated successfully!');
+          setVerifying(false);
+          setTimeout(() => {
+            navigate('/dashboard');
+          }, 2000);
+        } else {
+          setError('❌ ' + (data.message || 'Face update failed'));
+          setVerifying(false);
+        }
+      });
+    }
+
+    initiateUpdate();
     return () => {
-      stopVideo();
+      if (socket) {
+        socket.disconnect();
+      }
     };
   }, [navigate]);
 
-  const startVideo = async () => {
+  const initiateUpdate = async () => {
     try {
       setIsLoading(true);
       setError('');
+      setStatus('Generating QR code...');
 
-      // Load face detection models
-      await faceDetectionService.loadModels();
-
-      // Get video stream
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          width: 640, 
-          height: 480,
-          facingMode: 'user'
-        }
-      });
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-        setStream(mediaStream);
-      }
-
-      setIsLoading(false);
-    } catch (err) {
-      console.error('Error accessing camera:', err);
-      setError('Could not access camera. Please grant permission.');
-      setIsLoading(false);
-    }
-  };
-
-  const stopVideo = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-    }
-  };
-
-  useEffect(() => {
-    if (!isLoading && videoRef.current) {
-      const interval = setInterval(async () => {
-        const detection = await faceDetectionService.detectFace(videoRef.current);
-        
-        if (detection) {
-          setFaceDetected(true);
-          drawDetection(detection);
-        } else {
-          setFaceDetected(false);
-          clearCanvas();
-        }
-      }, 100);
-
-      return () => clearInterval(interval);
-    }
-  }, [isLoading]);
-
-  const drawDetection = (detection) => {
-    if (!canvasRef.current || !videoRef.current) return;
-
-    const canvas = canvasRef.current;
-    const displaySize = {
-      width: videoRef.current.videoWidth,
-      height: videoRef.current.videoHeight
-    };
-
-    faceapi.matchDimensions(canvas, displaySize);
-    const resizedDetection = faceapi.resizeResults(detection, displaySize);
-
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Draw face box
-    const box = resizedDetection.detection.box;
-    ctx.strokeStyle = '#00ff00';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(box.x, box.y, box.width, box.height);
-
-    // Draw corner brackets
-    const cornerLen = 35;
-    ctx.lineWidth = 7;
-    
-    // Top-left
-    ctx.beginPath();
-    ctx.moveTo(box.x, box.y + cornerLen);
-    ctx.lineTo(box.x, box.y);
-    ctx.lineTo(box.x + cornerLen, box.y);
-    ctx.stroke();
-    
-    // Top-right
-    ctx.beginPath();
-    ctx.moveTo(box.x + box.width - cornerLen, box.y);
-    ctx.lineTo(box.x + box.width, box.y);
-    ctx.lineTo(box.x + box.width, box.y + cornerLen);
-    ctx.stroke();
-    
-    // Bottom-left
-    ctx.beginPath();
-    ctx.moveTo(box.x, box.y + box.height - cornerLen);
-    ctx.lineTo(box.x, box.y + box.height);
-    ctx.lineTo(box.x + cornerLen, box.y + box.height);
-    ctx.stroke();
-    
-    // Bottom-right
-    ctx.beginPath();
-    ctx.moveTo(box.x + box.width - cornerLen, box.y + box.height);
-    ctx.lineTo(box.x + box.width, box.y + box.height);
-    ctx.lineTo(box.x + box.width, box.y + box.height - cornerLen);
-    ctx.stroke();
-
-    // Draw landmarks
-    if (resizedDetection.landmarks) {
-      ctx.fillStyle = '#00ff00';
-      ctx.shadowColor = '#00ff00';
-      ctx.shadowBlur = 8;
-      
-      resizedDetection.landmarks.positions.forEach((point) => {
-        ctx.beginPath();
-        ctx.arc(point.x, point.y, 3, 0, 2 * Math.PI);
-        ctx.fill();
-      });
-      
-      ctx.shadowBlur = 0;
-    }
-
-    // Draw confidence
-    const confidence = Math.round(resizedDetection.detection.score * 100);
-    ctx.fillStyle = '#00ff00';
-    ctx.font = 'bold 22px Arial';
-    ctx.shadowColor = 'black';
-    ctx.shadowBlur = 5;
-    ctx.fillText(`${confidence}%`, box.x + 10, box.y - 10);
-    ctx.shadowBlur = 0;
-  };
-
-  const clearCanvas = () => {
-    if (!canvasRef.current) return;
-    const ctx = canvasRef.current.getContext('2d');
-    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-  };
-
-  const handleCapture = async () => {
-    if (!videoRef.current || capturing) return;
-
-    try {
-      setError('');
-      setCapturing(true);
-
-      const detection = await faceDetectionService.detectFace(videoRef.current);
-
-      if (!detection) {
-        setError('No face detected. Please position your face in the frame.');
-        setCapturing(false);
-        return;
-      }
-
-      const validation = faceDetectionService.validateFaceDetection(detection);
-      if (!validation.valid) {
-        setError(validation.message);
-        setCapturing(false);
-        return;
-      }
-
-      const descriptor = Array.from(detection.descriptor);
-      setNewDescriptor(descriptor);
-      setShowConfirmation(true);
-      setCapturing(false);
-
-    } catch (err) {
-      console.error('Capture error:', err);
-      setError('Failed to capture face. Please try again.');
-      setCapturing(false);
-    }
-  };
-
-  const handleConfirmUpdate = async () => {
-    if (!newDescriptor) return;
-
-    try {
-      setCapturing(true);
       const token = localStorage.getItem('authToken');
-
-      if (!token) {
-        setError('❌ You are not authenticated. Please login again.');
-        setCapturing(false);
-        setTimeout(() => navigate('/login'), 2000);
-        return;
-      }
-
-      console.log('[UpdateFaceData] Sending face descriptor update...');
-      console.log('[UpdateFaceData] Descriptor length:', newDescriptor.length);
-
-      const response = await axios.put(
-        `${config.API_URL}/api/auth/update-face`,
-        { faceDescriptor: newDescriptor },
+      
+      // Call backend to initiate face update
+      const response = await axios.post(
+        `${config.API_URL}/api/auth/update-face/initiate`,
+        {},
         {
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+            'Authorization': `Bearer ${token}`
           }
         }
       );
 
-      console.log('[UpdateFaceData] Response:', response.data);
-
       if (response.data.success) {
-        setSuccess('✅ Face data updated successfully!');
-        stopVideo();
-        
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 2000);
+        setSessionId(response.data.sessionId);
+        generateQR(response.data.sessionId);
+        setShowQR(true);
+        setStatus('📱 Scan QR code with your mobile device');
+        setIsLoading(false);
       } else {
-        setError('❌ ' + (response.data.message || 'Failed to update face data'));
-        setCapturing(false);
-        setShowConfirmation(false);
+        setError('❌ Failed to initiate face update');
+        setIsLoading(false);
       }
     } catch (err) {
-      console.error('[UpdateFaceData] Error:', err);
-      
-      let errorMsg = 'Failed to update face data. Please try again.';
-      
-      if (err.response?.status === 401) {
-        errorMsg = 'Session expired. Please login again.';
-      } else if (err.response?.data?.message) {
-        errorMsg = err.response.data.message;
-      } else if (err.message) {
-        errorMsg = err.message;
-      }
-      
+      console.error('[UpdateFace] Error:', err);
+      const errorMsg = err.response?.data?.message || 'Failed to initiate face update';
       setError('❌ ' + errorMsg);
-      setCapturing(false);
-      setShowConfirmation(false);
+      setIsLoading(false);
     }
   };
 
-  const handleCancel = () => {
-    setShowConfirmation(false);
-    setNewDescriptor(null);
+  const generateQR = async (sid) => {
+    try {
+      const qrData = {
+        sessionId: sid,
+        type: 'update-face',
+        url: `${window.location.origin}/mobile-update-face/${sid}`
+      };
+
+      const qrString = JSON.stringify(qrData);
+      
+      if (qrRef.current) {
+        await QRCode.toCanvas(qrRef.current, qrString, {
+          errorCorrectionLevel: 'H',
+          type: 'image/png',
+          quality: 0.95,
+          margin: 1,
+          width: 300
+        });
+      }
+    } catch (err) {
+      console.error('QR generation error:', err);
+      setError('❌ Failed to generate QR code');
+    }
   };
 
   const handleGoBack = () => {
-    stopVideo();
     navigate('/dashboard');
   };
 
@@ -287,122 +151,67 @@ function UpdateFaceData() {
           <button onClick={handleGoBack} style={styles.backBtn}>
             ← Back
           </button>
-          <h1 style={styles.title}>🔄 Update Face Data</h1>
+          <h1 style={styles.title}>Update Face Data</h1>
           <div style={{ width: '80px' }}></div>
         </div>
 
         <p style={styles.subtitle}>
-          Capture your face again to update your biometric authentication data
+          Update your biometric authentication with a new face scan
         </p>
 
-        {/* Video Container */}
-        <div style={styles.videoContainer}>
-          <video
-            ref={videoRef}
-            autoPlay
-            muted
-            playsInline
-            style={styles.video}
-            onLoadedMetadata={() => {
-              if (canvasRef.current && videoRef.current) {
-                canvasRef.current.width = videoRef.current.videoWidth;
-                canvasRef.current.height = videoRef.current.videoHeight;
-              }
-            }}
-          />
-          <canvas ref={canvasRef} style={styles.canvas} />
-          
-          {isLoading && (
-            <div style={styles.overlay}>
-              <div style={styles.spinner}></div>
-              <p style={styles.overlayText}>Loading AI models...</p>
+        {/* QR Code Section */}
+        {showQR && !isLoading && (
+          <div style={styles.qrContainer}>
+            <div style={styles.qrBox}>
+              <canvas ref={qrRef} style={styles.qrCanvas} />
             </div>
-          )}
-
-          {!isLoading && (
-            <div style={{
-              ...styles.indicator,
-              backgroundColor: faceDetected ? '#4CAF50' : '#FF9800'
-            }}>
-              {faceDetected ? '✓ Face Detected' : '⚠ Position Face'}
-            </div>
-          )}
-        </div>
-
-        {/* Status Messages */}
-        <div style={styles.statusContainer}>
-          {faceDetected && !showConfirmation && (
-            <p style={styles.statusSuccess}>✓ Face detected - Ready to capture</p>
-          )}
-          {!faceDetected && !isLoading && !showConfirmation && (
-            <p style={styles.statusWarning}>Position your face in the frame</p>
-          )}
-          {error && <p style={styles.error}>{error}</p>}
-          {success && <p style={styles.success}>{success}</p>}
-        </div>
-
-        {/* Confirmation Dialog */}
-        {showConfirmation && (
-          <div style={styles.confirmationBox}>
-            <h3 style={styles.confirmTitle}>⚠️ Confirm Face Update</h3>
-            <p style={styles.confirmText}>
-              Are you sure you want to update your face data? 
-              This will replace your current biometric authentication.
-            </p>
-            <div style={styles.confirmButtons}>
-              <button 
-                onClick={handleConfirmUpdate} 
-                disabled={capturing}
-                style={styles.confirmBtn}
-              >
-                {capturing ? '⏳ Updating...' : '✅ Confirm Update'}
-              </button>
-              <button 
-                onClick={handleCancel}
-                disabled={capturing}
-                style={styles.cancelBtn}
-              >
-                ❌ Cancel
-              </button>
-            </div>
+            <p style={styles.qrHint}>Scan with your mobile device</p>
           </div>
         )}
 
-        {/* Capture Button */}
-        {!showConfirmation && (
-          <button
-            onClick={handleCapture}
-            disabled={!faceDetected || isLoading || capturing}
-            style={{
-              ...styles.button,
-              opacity: (!faceDetected || isLoading || capturing) ? 0.5 : 1,
-              cursor: (!faceDetected || isLoading || capturing) ? 'not-allowed' : 'pointer'
-            }}
-          >
-            {capturing ? '⏳ Capturing...' : '📸 Capture New Face'}
-          </button>
+        {/* Loading State */}
+        {isLoading && (
+          <div style={styles.loadingContainer}>
+            <div style={styles.spinner}></div>
+            <p style={styles.loadingText}>Generating QR code...</p>
+          </div>
         )}
+
+        {/* Verification State */}
+        {verifying && (
+          <div style={styles.verifyingContainer}>
+            <div style={styles.spinner}></div>
+            <p style={styles.verifyingText}>Verifying face...</p>
+          </div>
+        )}
+
+        {/* Status Messages */}
+        <div style={styles.statusContainer}>
+          {error && <p style={styles.error}>{error}</p>}
+          {success && <p style={styles.success}>{success}</p>}
+          {!error && !success && showQR && (
+            <p style={styles.statusText}>{status}</p>
+          )}
+        </div>
 
         {/* Instructions */}
         <div style={styles.instructions}>
-          <h3 style={styles.instructionTitle}>📋 Instructions:</h3>
-          <ul style={styles.instructionList}>
-            <li>Face the camera directly</li>
-            <li>Ensure good lighting</li>
-            <li>Remove glasses if possible</li>
-            <li>Keep a neutral expression</li>
-            <li>Wait for green indicators</li>
-            <li>Click "Capture New Face" when ready</li>
-          </ul>
+          <h3 style={styles.instructionTitle}>Steps:</h3>
+          <ol style={styles.instructionList}>
+            <li>Scan the QR code with your mobile device</li>
+            <li>Position your face in good lighting</li>
+            <li>Ensure green dots appear on your face</li>
+            <li>Tap "Capture Face" when prompted</li>
+            <li>Wait for verification to complete</li>
+          </ol>
         </div>
 
         {/* Warning */}
         <div style={styles.warningBox}>
           <span style={{ fontSize: '24px' }}>⚠️</span>
           <p style={styles.warningText}>
-            <strong>Important:</strong> Updating your face data will replace your 
-            current biometric authentication. Make sure you're in a well-lit area 
-            and your face is clearly visible.
+            <strong>Important:</strong> This will replace your current biometric data. 
+            Ensure you're in good lighting and your face is clearly visible.
           </p>
         </div>
       </div>
@@ -423,7 +232,7 @@ const styles = {
     backgroundColor: 'white',
     borderRadius: '20px',
     padding: '30px',
-    maxWidth: '700px',
+    maxWidth: '600px',
     width: '100%',
     boxShadow: '0 10px 40px rgba(0,0,0,0.3)'
   },
@@ -456,152 +265,100 @@ const styles = {
     fontSize: '14px',
     marginBottom: '25px'
   },
-  videoContainer: {
-    position: 'relative',
-    borderRadius: '15px',
-    overflow: 'hidden',
-    backgroundColor: '#000',
-    marginBottom: '20px'
-  },
-  video: {
-    width: '100%',
-    display: 'block'
-  },
-  canvas: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    pointerEvents: 'none'
-  },
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    backgroundColor: 'rgba(0,0,0,0.8)',
+  qrContainer: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'center'
+    marginBottom: '25px'
   },
-  overlayText: {
-    color: 'white',
+  qrBox: {
+    backgroundColor: '#fff',
+    padding: '15px',
+    borderRadius: '12px',
+    border: '2px solid #667eea',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+    marginBottom: '15px'
+  },
+  qrCanvas: {
+    maxWidth: '100%',
+    height: 'auto'
+  },
+  qrHint: {
+    color: '#666',
+    fontSize: '14px',
+    margin: '0 0 10px 0',
+    fontWeight: '600'
+  },
+  loadingContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '40px 20px'
+  },
+  loadingText: {
+    marginTop: '15px',
+    color: '#666',
     fontSize: '16px',
-    fontWeight: 'bold',
-    marginTop: '15px'
+    fontWeight: '600'
+  },
+  verifyingContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '40px 20px',
+    backgroundColor: '#f0f4ff',
+    borderRadius: '12px',
+    marginBottom: '20px'
+  },
+  verifyingText: {
+    marginTop: '15px',
+    color: '#667eea',
+    fontSize: '16px',
+    fontWeight: '600'
   },
   spinner: {
     width: '50px',
     height: '50px',
-    border: '5px solid rgba(255,255,255,0.3)',
-    borderTop: '5px solid white',
+    border: '5px solid rgba(102, 126, 234, 0.3)',
+    borderTop: '5px solid #667eea',
     borderRadius: '50%',
     animation: 'spin 1s linear infinite'
   },
-  indicator: {
-    position: 'absolute',
-    bottom: '15px',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    padding: '10px 25px',
-    borderRadius: '25px',
-    color: 'white',
-    fontSize: '15px',
-    fontWeight: 'bold',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-    zIndex: 10
-  },
   statusContainer: {
-    minHeight: '40px',
-    marginBottom: '15px'
+    minHeight: '50px',
+    marginBottom: '20px'
   },
-  statusSuccess: {
-    color: '#00ff00',
-    fontWeight: 'bold',
+  statusText: {
+    color: '#667eea',
+    fontSize: '15px',
+    fontWeight: '600',
     margin: 0,
-    textAlign: 'center'
-  },
-  statusWarning: {
-    color: '#ffa500',
-    margin: 0,
-    textAlign: 'center'
+    textAlign: 'center',
+    padding: '12px',
+    backgroundColor: '#f0f4ff',
+    borderRadius: '8px'
   },
   error: {
-    color: '#ff0000',
+    color: '#dc3545',
     margin: 0,
     textAlign: 'center',
-    padding: '10px',
-    backgroundColor: '#fee',
+    padding: '12px',
+    backgroundColor: '#f8d7da',
     borderRadius: '8px',
-    fontWeight: 'bold'
+    fontWeight: '600',
+    border: '1px solid #f5c6cb'
   },
   success: {
-    color: '#00aa00',
+    color: '#155724',
     margin: 0,
     textAlign: 'center',
-    padding: '10px',
-    backgroundColor: '#efe',
-    borderRadius: '8px',
-    fontWeight: 'bold'
-  },
-  confirmationBox: {
-    backgroundColor: '#fff3cd',
-    padding: '20px',
-    borderRadius: '12px',
-    border: '2px solid #ffc107',
-    marginBottom: '20px'
-  },
-  confirmTitle: {
-    margin: '0 0 10px 0',
-    color: '#856404',
-    fontSize: '20px'
-  },
-  confirmText: {
-    margin: '0 0 20px 0',
-    color: '#856404',
-    fontSize: '14px',
-    lineHeight: '1.6'
-  },
-  confirmButtons: {
-    display: 'flex',
-    gap: '10px'
-  },
-  confirmBtn: {
-    flex: 1,
     padding: '12px',
-    backgroundColor: '#28a745',
-    color: 'white',
-    border: 'none',
+    backgroundColor: '#d4edda',
     borderRadius: '8px',
-    fontSize: '16px',
-    fontWeight: 'bold',
-    cursor: 'pointer'
-  },
-  cancelBtn: {
-    flex: 1,
-    padding: '12px',
-    backgroundColor: '#dc3545',
-    color: 'white',
-    border: 'none',
-    borderRadius: '8px',
-    fontSize: '16px',
-    fontWeight: 'bold',
-    cursor: 'pointer'
-  },
-  button: {
-    width: '100%',
-    padding: '15px',
-    fontSize: '18px',
-    fontWeight: 'bold',
-    backgroundColor: '#667eea',
-    color: 'white',
-    border: 'none',
-    borderRadius: '12px',
-    transition: 'all 0.3s',
-    marginBottom: '20px'
+    fontWeight: '600',
+    border: '1px solid #c3e6cb'
   },
   instructions: {
     backgroundColor: '#f8f9fa',
@@ -621,7 +378,7 @@ const styles = {
     paddingLeft: '20px',
     fontSize: '14px',
     color: '#666',
-    lineHeight: '2'
+    lineHeight: '1.8'
   },
   warningBox: {
     backgroundColor: '#fff3cd',
