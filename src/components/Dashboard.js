@@ -287,11 +287,11 @@ function Dashboard() {
           }}>
             <ActionButton 
               label="🔄 Update Face Data" 
-              onClick={() => alert('Feature coming soon!')}
+              onClick={() => navigate('/update-face')}
             />
             <ActionButton 
               label="🔒 Change Password" 
-              onClick={() => alert('Feature coming soon!')}
+              onClick={() => navigate('/change-password')}
             />
             <ActionButton 
               label="📊 View Activity" 
