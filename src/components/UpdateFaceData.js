@@ -1,3 +1,5 @@
+'use client';
+
 /* eslint-disable react-hooks/exhaustive-deps */
 // src/components/UpdateFaceData.js
 import React, { useRef, useEffect, useState } from 'react';
@@ -213,15 +215,28 @@ function UpdateFaceData() {
       setCapturing(true);
       const token = localStorage.getItem('authToken');
 
+      if (!token) {
+        setError('❌ You are not authenticated. Please login again.');
+        setCapturing(false);
+        setTimeout(() => navigate('/login'), 2000);
+        return;
+      }
+
+      console.log('[UpdateFaceData] Sending face descriptor update...');
+      console.log('[UpdateFaceData] Descriptor length:', newDescriptor.length);
+
       const response = await axios.put(
         `${config.API_URL}/api/auth/update-face`,
         { faceDescriptor: newDescriptor },
         {
           headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
           }
         }
       );
+
+      console.log('[UpdateFaceData] Response:', response.data);
 
       if (response.data.success) {
         setSuccess('✅ Face data updated successfully!');
@@ -230,10 +245,24 @@ function UpdateFaceData() {
         setTimeout(() => {
           navigate('/dashboard');
         }, 2000);
+      } else {
+        setError('❌ ' + (response.data.message || 'Failed to update face data'));
+        setCapturing(false);
+        setShowConfirmation(false);
       }
     } catch (err) {
-      console.error('Update error:', err);
-      const errorMsg = err.response?.data?.message || 'Failed to update face data';
+      console.error('[UpdateFaceData] Error:', err);
+      
+      let errorMsg = 'Failed to update face data. Please try again.';
+      
+      if (err.response?.status === 401) {
+        errorMsg = 'Session expired. Please login again.';
+      } else if (err.response?.data?.message) {
+        errorMsg = err.response.data.message;
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      
       setError('❌ ' + errorMsg);
       setCapturing(false);
       setShowConfirmation(false);

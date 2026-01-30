@@ -314,12 +314,14 @@ function Dashboard() {
           >
             <ActionButton
               label="🔄 Update Face Data"
-              onClick={() => alert("🚧 Under Development!")}
+              onClick={() => navigate("/update-face")}
             />
+
             <ActionButton
               label="🔒 Change Password"
-              onClick={() => alert("🚧 Under Development!")}
+              onClick={() => navigate("/change-password")}
             />
+
             <ActionButton
               label="📊 View Activity"
               onClick={() => alert("🚧 Under Development!")}

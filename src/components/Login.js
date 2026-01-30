@@ -1,3 +1,5 @@
+'use client';
+
 // src/components/Login.js
 import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -119,31 +121,56 @@ function Login() {
     try {
       setLoading(true);
       
-      const sessionResponse = await axios.post(`${config.API_URL}/api/session/create`, {
-        sessionId,
-        email,
-        password,
-        type: 'login'
+      // First, validate credentials with backend BEFORE generating QR
+      console.log('[Login] Validating credentials...');
+      const validateResponse = await axios.post(`${config.API_URL}/api/auth/login/initiate`, {
+        email: email.toLowerCase(),
+        password
       });
 
-      if (sessionResponse.data.success) {
-        setShowQR(true);
-        setStatus('📱 Scan QR code with mobile to verify face');
-        setLoading(false);
+      if (validateResponse.data.success) {
+        console.log('[Login] Credentials valid! Session ID:', validateResponse.data.sessionId);
         
-        socket.emit('qr-generated', { 
-          sessionId, 
-          type: 'login',
-          email 
+        // Now create session with validated credentials
+        const sessionResponse = await axios.post(`${config.API_URL}/api/session/create`, {
+          sessionId,
+          email: email.toLowerCase(),
+          password,
+          type: 'login'
         });
+
+        if (sessionResponse.data.success) {
+          setShowQR(true);
+          setStatus('✅ Credentials verified! Scan QR code with mobile');
+          setLoading(false);
+          
+          socket.emit('qr-generated', { 
+            sessionId, 
+            type: 'login',
+            email: email.toLowerCase()
+          });
+        }
       }
     } catch (error) {
       setLoading(false);
-      console.error('Session creation error:', error);
-      const errorMsg = error.response?.data?.message || 'Failed to create session. Please try again.';
+      console.error('[Login] Error:', error);
+      
+      // Check for specific error messages
+      let errorMsg = 'Failed to login. Please try again.';
+      
+      if (error.response?.status === 401) {
+        errorMsg = 'Invalid email or password';
+      } else if (error.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
+      
       setStatus('❌ ' + errorMsg);
       
-      setTimeout(() => setStatus(''), 4000);
+      setTimeout(() => {
+        setStatus('');
+      }, 4000);
     }
   };
 

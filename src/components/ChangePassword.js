@@ -1,3 +1,5 @@
+'use client';
+
 // src/components/ChangePassword.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -131,6 +133,15 @@ function ChangePassword() {
 
     try {
       const token = localStorage.getItem('authToken');
+      
+      if (!token) {
+        setError('❌ You are not authenticated. Please login again.');
+        setLoading(false);
+        setTimeout(() => navigate('/login'), 2000);
+        return;
+      }
+
+      console.log('[ChangePassword] Sending request to change password...');
 
       const response = await axios.put(
         `${config.API_URL}/api/auth/change-password`,
@@ -140,10 +151,13 @@ function ChangePassword() {
         },
         {
           headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
           }
         }
       );
+
+      console.log('[ChangePassword] Response:', response.data);
 
       if (response.data.success) {
         setSuccess('✅ Password changed successfully! Logging out...');
@@ -163,12 +177,24 @@ function ChangePassword() {
           sessionStorage.clear();
           navigate('/login');
         }, 2000);
+      } else {
+        setError('❌ ' + (response.data.message || 'Failed to change password'));
+        setLoading(false);
       }
     } catch (err) {
-      console.error('Password change error:', err);
-      const errorMsg = err.response?.data?.message || 'Failed to change password';
+      console.error('[ChangePassword] Error:', err);
+      
+      let errorMsg = 'Failed to change password. Please try again.';
+      
+      if (err.response?.status === 401) {
+        errorMsg = 'Session expired. Please login again.';
+      } else if (err.response?.data?.message) {
+        errorMsg = err.response.data.message;
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      
       setError('❌ ' + errorMsg);
-    } finally {
       setLoading(false);
     }
   };
