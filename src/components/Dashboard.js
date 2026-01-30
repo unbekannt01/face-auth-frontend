@@ -314,7 +314,7 @@ function Dashboard() {
           >
             <ActionButton
               label="🔄 Update Face Data"
-              onClick={() => navigate("/update-face")}
+              onClick={() => alert("🚧 Under Development!")}
             />
 
             <ActionButton
