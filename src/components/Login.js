@@ -1,5 +1,3 @@
-'use client';
-
 // src/components/Login.js
 import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -21,7 +19,7 @@ function Login() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // 🔥 Clear all auth data when component mounts (fresh login)
+    //  Clear all auth data when component mounts (fresh login)
     localStorage.removeItem('authToken');
     localStorage.removeItem('user');
     localStorage.removeItem('token');
@@ -33,7 +31,7 @@ function Login() {
       
       if (data.sessionId === sessionId) {
         if (data.success) {
-          setStatus('✅ Face verified! Logging in...');
+          setStatus(' Face verified! Logging in...');
           setLoading(true);
 
           try {
@@ -51,11 +49,11 @@ function Login() {
             if (response.data.success) {
               console.log('[Login] Token received');
               
-              // 🔥 Store auth data
+              //  Store auth data
               localStorage.setItem('authToken', response.data.token);
               localStorage.setItem('user', JSON.stringify(response.data.user));
               
-              setStatus('✅ Login Successful! Redirecting...');
+              setStatus(' Login Successful! Redirecting...');
               setShowQR(false);
               
               await new Promise(resolve => setTimeout(resolve, 800));
@@ -100,20 +98,20 @@ function Login() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      setStatus('⚠️ Please fill all fields');
+      setStatus(' Please fill all fields');
       setTimeout(() => setStatus(''), 3000);
       return;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      setStatus('⚠️ Invalid email format');
+      setStatus(' Invalid email format');
       setTimeout(() => setStatus(''), 3000);
       return;
     }
 
     if (password.length < 6) {
-      setStatus('⚠️ Password must be at least 6 characters');
+      setStatus(' Password must be at least 6 characters');
       setTimeout(() => setStatus(''), 3000);
       return;
     }
@@ -141,7 +139,7 @@ function Login() {
 
         if (sessionResponse.data.success) {
           setShowQR(true);
-          setStatus('✅ Credentials verified! Scan QR code with mobile');
+          setStatus(' Credentials verified! Scan QR code with mobile');
           setLoading(false);
           
           socket.emit('qr-generated', { 
@@ -283,11 +281,11 @@ function Login() {
           <div style={{
             ...styles.statusBox,
             backgroundColor: status.includes('❌') ? '#fee' : 
-                           status.includes('✅') ? '#efe' : '#fff3cd',
+                           status.includes('') ? '#efe' : '#fff3cd',
             color: status.includes('❌') ? '#c00' : 
-                   status.includes('✅') ? '#0a0' : '#856404',
+                   status.includes('') ? '#0a0' : '#856404',
             border: `2px solid ${status.includes('❌') ? '#fcc' : 
-                                 status.includes('✅') ? '#cfc' : '#ffeaa7'}`
+                                 status.includes('') ? '#cfc' : '#ffeaa7'}`
           }}>
             {status}
           </div>

@@ -1,6 +1,3 @@
-/* eslint-disable no-unused-vars */
-'use client';
-
 /* eslint-disable react-hooks/exhaustive-deps */
 // src/components/UpdateFaceData.js
 import React, { useRef, useEffect, useState } from 'react';
@@ -15,8 +12,6 @@ let socket = null;
 function UpdateFaceData() {
   const navigate = useNavigate();
   const qrRef = useRef(null);
-  const videoRef = useRef(null); // Declare videoRef
-  const canvasRef = useRef(null); // Declare canvasRef
   const [sessionId, setSessionId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -24,23 +19,6 @@ function UpdateFaceData() {
   const [status, setStatus] = useState('Generating QR code...');
   const [showQR, setShowQR] = useState(false);
   const [verifying, setVerifying] = useState(false);
-  const [faceDetected, setFaceDetected] = useState(false); // Declare faceDetected
-  const [stream, setStream] = useState(null); // Declare stream
-  const [capturing, setCapturing] = useState(false); // Declare capturing
-  const [newDescriptor, setNewDescriptor] = useState(null); // Declare newDescriptor
-  const [showConfirmation, setShowConfirmation] = useState(false); // Declare showConfirmation
-
-  const handleConfirmUpdate = async () => {
-    // Logic to confirm face update
-  };
-
-  const handleCancel = () => {
-    // Logic to cancel face update
-  };
-
-  const handleCapture = () => {
-    // Logic to capture new face
-  };
 
   useEffect(() => {
     // Check if user is logged in
@@ -57,7 +35,7 @@ function UpdateFaceData() {
       socket.on('face-verification-complete', (data) => {
         console.log('[UpdateFace] Verification complete:', data);
         if (data.success) {
-          setSuccess('✅ Face updated successfully!');
+          setSuccess(' Face updated successfully!');
           setVerifying(false);
           setTimeout(() => {
             navigate('/dashboard');
@@ -208,7 +186,7 @@ function UpdateFaceData() {
 
         {/* Warning */}
         <div style={styles.warningBox}>
-          <span style={{ fontSize: '24px' }}>⚠️</span>
+          <span style={{ fontSize: '24px' }}></span>
           <p style={styles.warningText}>
             <strong>Important:</strong> This will replace your current biometric data. 
             Ensure you're in good lighting and your face is clearly visible.

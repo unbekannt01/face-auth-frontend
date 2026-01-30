@@ -1,5 +1,3 @@
-'use client';
-
 /* eslint-disable react-hooks/exhaustive-deps */
 // src/components/MobileUpdateFace.js
 import React, { useEffect, useRef, useState, useCallback } from 'react';

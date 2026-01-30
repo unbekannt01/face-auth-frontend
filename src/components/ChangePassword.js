@@ -1,5 +1,3 @@
-'use client';
-
 // src/components/ChangePassword.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -92,28 +90,28 @@ function ChangePassword() {
     const { currentPassword, newPassword, confirmPassword } = formData;
 
     if (!currentPassword || !newPassword || !confirmPassword) {
-      setError('⚠️ All fields are required');
+      setError(' All fields are required');
       return false;
     }
 
     if (newPassword.length < 8) {
-      setError('⚠️ New password must be at least 8 characters long');
+      setError(' New password must be at least 8 characters long');
       return false;
     }
 
     if (newPassword === currentPassword) {
-      setError('⚠️ New password must be different from current password');
+      setError(' New password must be different from current password');
       return false;
     }
 
     if (newPassword !== confirmPassword) {
-      setError('⚠️ New password and confirm password do not match');
+      setError(' New password and confirm password do not match');
       return false;
     }
 
     // Check password strength
     if (passwordStrength.score < 3) {
-      setError('⚠️ Password is too weak. Use a mix of uppercase, lowercase, numbers, and symbols');
+      setError(' Password is too weak. Use a mix of uppercase, lowercase, numbers, and symbols');
       return false;
     }
 
@@ -160,7 +158,7 @@ function ChangePassword() {
       console.log('[ChangePassword] Response:', response.data);
 
       if (response.data.success) {
-        setSuccess('✅ Password changed successfully! Logging out...');
+        setSuccess(' Password changed successfully! Logging out...');
         
         // Clear form
         setFormData({
@@ -343,7 +341,7 @@ function ChangePassword() {
                 cursor: loading ? 'not-allowed' : 'pointer'
               }}
             >
-              {loading ? '⏳ Changing...' : '✅ Change Password'}
+              {loading ? '⏳ Changing...' : ' Change Password'}
             </button>
             
             <button

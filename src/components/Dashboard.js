@@ -40,7 +40,7 @@ function Dashboard() {
       });
   }, [navigate]);
 
-  // 🔥 Complete cleanup function
+  //  Complete cleanup function
   const clearAllAuthData = () => {
     // Remove all auth-related items from localStorage
     localStorage.removeItem("authToken");
@@ -53,7 +53,7 @@ function Dashboard() {
     // Clear sessionStorage
     sessionStorage.clear();
 
-    console.log("✅ All authentication data cleared");
+    console.log(" All authentication data cleared");
   };
 
   const handleLogout = () => {
@@ -274,7 +274,7 @@ function Dashboard() {
             color="#4caf50"
           />
           <StatCard
-            icon="✅"
+            icon=""
             title="Account Status"
             value="Active"
             color="#2196f3"
