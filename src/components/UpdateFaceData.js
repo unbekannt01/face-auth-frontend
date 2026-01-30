@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 /* eslint-disable react-hooks/exhaustive-deps */
 // src/components/UpdateFaceData.js
 import React, { useRef, useEffect, useState } from 'react';
