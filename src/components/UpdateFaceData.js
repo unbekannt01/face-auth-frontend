@@ -1,12 +1,13 @@
-/* eslint-disable no-unused-vars */
+'use client';
+
 /* eslint-disable react-hooks/exhaustive-deps */
 // src/components/UpdateFaceData.js
-import React, { useRef, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import QRCode from "qrcode";
-import { config } from "../config";
-import io from "socket.io-client";
+import React, { useRef, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import QRCode from 'qrcode';
+import { config } from '../config';
+import io from 'socket.io-client';
 
 let socket = null;
 
@@ -15,34 +16,34 @@ function UpdateFaceData() {
   const qrRef = useRef(null);
   const [sessionId, setSessionId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [status, setStatus] = useState("Generating QR code...");
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [status, setStatus] = useState('Generating QR code...');
   const [showQR, setShowQR] = useState(false);
   const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
     // Check if user is logged in
-    const token = localStorage.getItem("authToken");
+    const token = localStorage.getItem('authToken');
     if (!token) {
-      navigate("/login");
+      navigate('/login');
       return;
     }
 
     // Initialize socket
     if (!socket) {
       socket = io(config.API_URL);
-
-      socket.on("face-verification-complete", (data) => {
-        console.log("[UpdateFace] Verification complete:", data);
+      
+      socket.on('face-verification-complete', (data) => {
+        console.log('[UpdateFace] Verification complete:', data);
         if (data.success) {
-          setSuccess(" Face updated successfully!");
+          setSuccess('✅ Face updated successfully!');
           setVerifying(false);
           setTimeout(() => {
-            navigate("/dashboard");
+            navigate('/dashboard');
           }, 2000);
         } else {
-          setError("❌ " + (data.message || "Face update failed"));
+          setError('❌ ' + (data.message || 'Face update failed'));
           setVerifying(false);
         }
       });
@@ -56,76 +57,88 @@ function UpdateFaceData() {
     };
   }, [navigate]);
 
-  useEffect(() => {
-    if (showQR && sessionId && qrRef.current) {
-      generateQR(sessionId);
-    }
-  }, [showQR, sessionId]);
-
   const initiateUpdate = async () => {
     try {
       setIsLoading(true);
-      setError("");
-      setStatus("Generating QR code...");
+      setError('');
+      setStatus('Generating QR code...');
 
-      const token = localStorage.getItem("authToken");
-
+      const token = localStorage.getItem('authToken');
+      
       // Call backend to initiate face update
       const response = await axios.post(
         `${config.API_URL}/api/auth/update-face/initiate`,
         {},
         {
           headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
+            'Authorization': `Bearer ${token}`
+          }
+        }
       );
 
       if (response.data.success) {
-        setSessionId(response.data.sessionId);
+        const sid = response.data.sessionId;
+        setSessionId(sid);
+        
+        console.log('[UpdateFace] Session created:', sid);
+        
+        // Create session on server to store user data for mobile
+        try {
+          await axios.post(
+            `${config.API_URL}/api/session/update-face/${sid}`,
+            {},
+            {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            }
+          );
+          console.log('[UpdateFace] Session stored on server');
+        } catch (sessionErr) {
+          console.error('[UpdateFace] Session store error:', sessionErr);
+          // Continue anyway - session might still work
+        }
+        
+        generateQR(sid);
         setShowQR(true);
-        setStatus("📱 Scan QR code with your mobile device");
+        setStatus('📱 Scan QR code with your mobile device');
         setIsLoading(false);
       } else {
-        setError("❌ Failed to initiate face update");
+        setError('❌ Failed to initiate face update');
         setIsLoading(false);
       }
     } catch (err) {
-      console.error("[UpdateFace] Error:", err);
-      const errorMsg =
-        err.response?.data?.message || "Failed to initiate face update";
-      setError("❌ " + errorMsg);
+      console.error('[UpdateFace] Error:', err);
+      const errorMsg = err.response?.data?.message || 'Failed to initiate face update';
+      setError('❌ ' + errorMsg);
       setIsLoading(false);
     }
   };
 
   const generateQR = async (sid) => {
     try {
-      const qrData = {
-        sessionId: sid,
-        type: "update-face",
-        url: `${window.location.origin}/mobile-update-face/${sid}`,
-      };
-
-      const qrString = JSON.stringify(qrData);
-
+      // Generate full URL that mobile can scan and open directly
+      const mobileUrl = `${window.location.origin}/mobile-update-face/${sid}`;
+      
+      console.log('[UpdateFace] Generating QR with URL:', mobileUrl);
+      
       if (qrRef.current) {
-        await QRCode.toCanvas(qrRef.current, qrString, {
-          errorCorrectionLevel: "H",
-          type: "image/png",
+        await QRCode.toCanvas(qrRef.current, mobileUrl, {
+          errorCorrectionLevel: 'H',
+          type: 'image/png',
           quality: 0.95,
           margin: 1,
-          width: 300,
+          width: 300
         });
       }
     } catch (err) {
-      console.error("QR generation error:", err);
-      setError("❌ Failed to generate QR code");
+      console.error('[UpdateFace] QR generation error:', err);
+      setError('❌ Failed to generate QR code');
     }
   };
 
   const handleGoBack = () => {
-    navigate("/dashboard");
+    navigate('/dashboard');
   };
 
   return (
@@ -137,7 +150,7 @@ function UpdateFaceData() {
             ← Back
           </button>
           <h1 style={styles.title}>Update Face Data</h1>
-          <div style={{ width: "80px" }}></div>
+          <div style={{ width: '80px' }}></div>
         </div>
 
         <p style={styles.subtitle}>
@@ -193,11 +206,10 @@ function UpdateFaceData() {
 
         {/* Warning */}
         <div style={styles.warningBox}>
-          <span style={{ fontSize: "24px" }}></span>
+          <span style={{ fontSize: '24px' }}>⚠️</span>
           <p style={styles.warningText}>
-            <strong>Important:</strong> This will replace your current biometric
-            data. Ensure you're in good lighting and your face is clearly
-            visible.
+            <strong>Important:</strong> This will replace your current biometric data. 
+            Ensure you're in good lighting and your face is clearly visible.
           </p>
         </div>
       </div>
@@ -207,180 +219,180 @@ function UpdateFaceData() {
 
 const styles = {
   container: {
-    minHeight: "100vh",
-    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "20px",
+    minHeight: '100vh',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '20px'
   },
   card: {
-    backgroundColor: "white",
-    borderRadius: "20px",
-    padding: "30px",
-    maxWidth: "600px",
-    width: "100%",
-    boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
+    backgroundColor: 'white',
+    borderRadius: '20px',
+    padding: '30px',
+    maxWidth: '600px',
+    width: '100%',
+    boxShadow: '0 10px 40px rgba(0,0,0,0.3)'
   },
   header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "15px",
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '15px'
   },
   backBtn: {
-    padding: "10px 20px",
-    backgroundColor: "#6c757d",
-    color: "white",
-    border: "none",
-    borderRadius: "8px",
-    cursor: "pointer",
-    fontSize: "14px",
-    fontWeight: "bold",
+    padding: '10px 20px',
+    backgroundColor: '#6c757d',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 'bold'
   },
   title: {
-    fontSize: "28px",
+    fontSize: '28px',
     margin: 0,
-    color: "#333",
-    textAlign: "center",
-    flex: 1,
+    color: '#333',
+    textAlign: 'center',
+    flex: 1
   },
   subtitle: {
-    textAlign: "center",
-    color: "#666",
-    fontSize: "14px",
-    marginBottom: "25px",
+    textAlign: 'center',
+    color: '#666',
+    fontSize: '14px',
+    marginBottom: '25px'
   },
   qrContainer: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    marginBottom: "25px",
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    marginBottom: '25px'
   },
   qrBox: {
-    backgroundColor: "#fff",
-    padding: "15px",
-    borderRadius: "12px",
-    border: "2px solid #667eea",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-    marginBottom: "15px",
+    backgroundColor: '#fff',
+    padding: '15px',
+    borderRadius: '12px',
+    border: '2px solid #667eea',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+    marginBottom: '15px'
   },
   qrCanvas: {
-    maxWidth: "100%",
-    height: "auto",
+    maxWidth: '100%',
+    height: 'auto'
   },
   qrHint: {
-    color: "#666",
-    fontSize: "14px",
-    margin: "0 0 10px 0",
-    fontWeight: "600",
+    color: '#666',
+    fontSize: '14px',
+    margin: '0 0 10px 0',
+    fontWeight: '600'
   },
   loadingContainer: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "40px 20px",
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '40px 20px'
   },
   loadingText: {
-    marginTop: "15px",
-    color: "#666",
-    fontSize: "16px",
-    fontWeight: "600",
+    marginTop: '15px',
+    color: '#666',
+    fontSize: '16px',
+    fontWeight: '600'
   },
   verifyingContainer: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "40px 20px",
-    backgroundColor: "#f0f4ff",
-    borderRadius: "12px",
-    marginBottom: "20px",
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '40px 20px',
+    backgroundColor: '#f0f4ff',
+    borderRadius: '12px',
+    marginBottom: '20px'
   },
   verifyingText: {
-    marginTop: "15px",
-    color: "#667eea",
-    fontSize: "16px",
-    fontWeight: "600",
+    marginTop: '15px',
+    color: '#667eea',
+    fontSize: '16px',
+    fontWeight: '600'
   },
   spinner: {
-    width: "50px",
-    height: "50px",
-    border: "5px solid rgba(102, 126, 234, 0.3)",
-    borderTop: "5px solid #667eea",
-    borderRadius: "50%",
-    animation: "spin 1s linear infinite",
+    width: '50px',
+    height: '50px',
+    border: '5px solid rgba(102, 126, 234, 0.3)',
+    borderTop: '5px solid #667eea',
+    borderRadius: '50%',
+    animation: 'spin 1s linear infinite'
   },
   statusContainer: {
-    minHeight: "50px",
-    marginBottom: "20px",
+    minHeight: '50px',
+    marginBottom: '20px'
   },
   statusText: {
-    color: "#667eea",
-    fontSize: "15px",
-    fontWeight: "600",
+    color: '#667eea',
+    fontSize: '15px',
+    fontWeight: '600',
     margin: 0,
-    textAlign: "center",
-    padding: "12px",
-    backgroundColor: "#f0f4ff",
-    borderRadius: "8px",
+    textAlign: 'center',
+    padding: '12px',
+    backgroundColor: '#f0f4ff',
+    borderRadius: '8px'
   },
   error: {
-    color: "#dc3545",
+    color: '#dc3545',
     margin: 0,
-    textAlign: "center",
-    padding: "12px",
-    backgroundColor: "#f8d7da",
-    borderRadius: "8px",
-    fontWeight: "600",
-    border: "1px solid #f5c6cb",
+    textAlign: 'center',
+    padding: '12px',
+    backgroundColor: '#f8d7da',
+    borderRadius: '8px',
+    fontWeight: '600',
+    border: '1px solid #f5c6cb'
   },
   success: {
-    color: "#155724",
+    color: '#155724',
     margin: 0,
-    textAlign: "center",
-    padding: "12px",
-    backgroundColor: "#d4edda",
-    borderRadius: "8px",
-    fontWeight: "600",
-    border: "1px solid #c3e6cb",
+    textAlign: 'center',
+    padding: '12px',
+    backgroundColor: '#d4edda',
+    borderRadius: '8px',
+    fontWeight: '600',
+    border: '1px solid #c3e6cb'
   },
   instructions: {
-    backgroundColor: "#f8f9fa",
-    padding: "20px",
-    borderRadius: "12px",
-    border: "1px solid #dee2e6",
-    marginBottom: "15px",
+    backgroundColor: '#f8f9fa',
+    padding: '20px',
+    borderRadius: '12px',
+    border: '1px solid #dee2e6',
+    marginBottom: '15px'
   },
   instructionTitle: {
-    margin: "0 0 15px 0",
-    fontSize: "16px",
-    fontWeight: "bold",
-    color: "#333",
+    margin: '0 0 15px 0',
+    fontSize: '16px',
+    fontWeight: 'bold',
+    color: '#333'
   },
   instructionList: {
     margin: 0,
-    paddingLeft: "20px",
-    fontSize: "14px",
-    color: "#666",
-    lineHeight: "1.8",
+    paddingLeft: '20px',
+    fontSize: '14px',
+    color: '#666',
+    lineHeight: '1.8'
   },
   warningBox: {
-    backgroundColor: "#fff3cd",
-    padding: "15px",
-    borderRadius: "10px",
-    border: "2px solid #ffc107",
-    display: "flex",
-    gap: "15px",
-    alignItems: "flex-start",
+    backgroundColor: '#fff3cd',
+    padding: '15px',
+    borderRadius: '10px',
+    border: '2px solid #ffc107',
+    display: 'flex',
+    gap: '15px',
+    alignItems: 'flex-start'
   },
   warningText: {
     margin: 0,
-    fontSize: "13px",
-    color: "#856404",
-    lineHeight: "1.6",
-  },
+    fontSize: '13px',
+    color: '#856404',
+    lineHeight: '1.6'
+  }
 };
 
 // Add animation
@@ -391,8 +403,8 @@ styleSheet.innerText = `
     100% { transform: rotate(360deg); }
   }
 `;
-if (!document.head.querySelector("style[data-update-face]")) {
-  styleSheet.setAttribute("data-update-face", "true");
+if (!document.head.querySelector('style[data-update-face]')) {
+  styleSheet.setAttribute('data-update-face', 'true');
   document.head.appendChild(styleSheet);
 }
 
