@@ -6,7 +6,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import QRCodeSVG from 'qrcode.react'; // Import QRCodeSVG
+import { QRCodeSVG } from 'qrcode.react'; // Import QRCodeSVG
 import { v4 as uuidv4 } from 'uuid';
 import { config } from '../config';
 import io from 'socket.io-client';
