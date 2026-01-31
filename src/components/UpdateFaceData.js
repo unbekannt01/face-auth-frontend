@@ -3,10 +3,11 @@
 
 /* eslint-disable react-hooks/exhaustive-deps */
 // src/components/UpdateFaceData.js
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import QRCode from 'qrcode';
+import QRCodeSVG from 'qrcode-svg'; // Import QRCodeSVG
+import { v4 as uuidv4 } from 'uuid';
 import { config } from '../config';
 import io from 'socket.io-client';
 
@@ -14,14 +15,14 @@ let socket = null;
 
 function UpdateFaceData() {
   const navigate = useNavigate();
-  const qrRef = useRef(null);
-  const [sessionId, setSessionId] = useState(null);
+  const [sessionId, setSessionId] = useState(uuidv4());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [status, setStatus] = useState('Generating QR code...');
   const [showQR, setShowQR] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const qrRef = useRef(null);
 
   useEffect(() => {
     // Check if user is logged in
@@ -78,20 +79,17 @@ function UpdateFaceData() {
       );
 
       if (response.data.success) {
-        const sid = response.data.sessionId;
-        setSessionId(sid);
-        
-        console.log('[UpdateFace] Session created:', sid);
+        console.log('[UpdateFace] Session created:', sessionId);
         
         // Create session on server to store user data for mobile
         try {
           await axios.post(
-            `${config.API_URL}/api/session/update-face/${sid}`,
-            {},
+            `${config.API_URL}/api/session/create`,
             {
-              headers: {
-                'Authorization': `Bearer ${token}`
-              }
+              sessionId,
+              email: 'update-face', // Placeholder for update-face flow
+              password: '', // Not needed for update-face
+              type: 'update-face'
             }
           );
           console.log('[UpdateFace] Session stored on server');
@@ -100,7 +98,6 @@ function UpdateFaceData() {
           // Continue anyway - session might still work
         }
         
-        generateQR(sid);
         setShowQR(true);
         setStatus('📱 Scan QR code with your mobile device');
         setIsLoading(false);
@@ -113,28 +110,6 @@ function UpdateFaceData() {
       const errorMsg = err.response?.data?.message || 'Failed to initiate face update';
       setError('❌ ' + errorMsg);
       setIsLoading(false);
-    }
-  };
-
-  const generateQR = async (sid) => {
-    try {
-      // Generate full URL that mobile can scan and open directly
-      const mobileUrl = `${window.location.origin}/mobile-update-face/${sid}`;
-      
-      console.log('[UpdateFace] Generating QR with URL:', mobileUrl);
-      
-      if (qrRef.current) {
-        await QRCode.toCanvas(qrRef.current, mobileUrl, {
-          errorCorrectionLevel: 'H',
-          type: 'image/png',
-          quality: 0.95,
-          margin: 1,
-          width: 300
-        });
-      }
-    } catch (err) {
-      console.error('[UpdateFace] QR generation error:', err);
-      setError('❌ Failed to generate QR code');
     }
   };
 
@@ -162,9 +137,26 @@ function UpdateFaceData() {
         {showQR && !isLoading && (
           <div style={styles.qrContainer}>
             <div style={styles.qrBox}>
-              <canvas ref={qrRef} style={styles.qrCanvas} />
+              <QRCodeSVG 
+                value={`${config.APP_URL}/mobile-update-face/${sessionId}`}
+                size={256}
+                level="H"
+                includeMargin={true}
+              />
             </div>
             <p style={styles.qrHint}>Scan with your mobile device</p>
+            
+            <div style={styles.manualLinkBox}>
+              <p style={styles.manualLinkLabel}>Or click to open directly:</p>
+              <a 
+                href={`${config.APP_URL}/mobile-update-face/${sessionId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={styles.manualLink}
+              >
+                Open on Mobile
+              </a>
+            </div>
           </div>
         )}
 
@@ -287,6 +279,32 @@ const styles = {
     fontSize: '14px',
     margin: '0 0 10px 0',
     fontWeight: '600'
+  },
+  manualLinkBox: {
+    backgroundColor: '#f0f4ff',
+    padding: '15px',
+    borderRadius: '8px',
+    border: '2px solid #667eea',
+    marginTop: '15px',
+    textAlign: 'center'
+  },
+  manualLinkLabel: {
+    color: '#666',
+    fontSize: '13px',
+    margin: '0 0 10px 0',
+    fontWeight: '500'
+  },
+  manualLink: {
+    display: 'inline-block',
+    padding: '10px 25px',
+    backgroundColor: '#667eea',
+    color: 'white',
+    textDecoration: 'none',
+    borderRadius: '6px',
+    fontWeight: '600',
+    fontSize: '14px',
+    transition: 'all 0.3s',
+    cursor: 'pointer'
   },
   loadingContainer: {
     display: 'flex',
