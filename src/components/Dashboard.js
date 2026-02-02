@@ -1,3 +1,5 @@
+'use client';
+
 // frontend/src/components/Dashboard.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -101,119 +103,141 @@ function Dashboard() {
   return (
     <div
       style={{
-        minHeight: "100vh",
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-        padding: "40px",
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #0f1628 100%)',
+        padding: '40px 20px',
+        position: 'relative',
+        overflow: 'hidden'
       }}
     >
+      <div style={{
+        position: 'fixed',
+        width: '400px',
+        height: '400px',
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, transparent 70%)',
+        top: '-100px',
+        right: '-100px',
+        filter: 'blur(50px)',
+        animation: 'float 8s ease-in-out infinite',
+        zIndex: 0,
+        pointerEvents: 'none'
+      }}></div>
+
       <div
         style={{
-          maxWidth: "900px",
-          margin: "0 auto",
-          backgroundColor: "white",
-          borderRadius: "20px",
-          padding: "40px",
-          boxShadow: "0 10px 40px rgba(0,0,0,0.2)",
+          maxWidth: '1200px',
+          margin: '0 auto',
+          background: 'linear-gradient(135deg, rgba(20, 24, 82, 0.8), rgba(30, 30, 70, 0.6))',
+          border: '1px solid rgba(139, 92, 246, 0.2)',
+          borderRadius: '20px',
+          padding: '50px',
+          boxShadow: '0 20px 60px rgba(139, 92, 246, 0.2), 0 0 40px rgba(139, 92, 246, 0.1)',
+          backdropFilter: 'blur(20px)',
+          position: 'relative',
+          zIndex: 1
         }}
       >
         {/* Header Section */}
         <div
           style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "30px",
-            flexWrap: "wrap",
-            gap: "15px",
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '50px',
+            flexWrap: 'wrap',
+            gap: '20px',
           }}
         >
-          <h1
-            style={{
-              color: "#333",
-              margin: 0,
-              fontSize: "32px",
-            }}
-          >
-            🎉 Welcome Back, {userData?.name}!
-          </h1>
+          <div>
+            <p style={{
+              margin: '0 0 8px 0',
+              color: '#b0b0c9',
+              fontSize: '13px',
+              textTransform: 'uppercase',
+              letterSpacing: '2px',
+              fontWeight: '600'
+            }}>Welcome back</p>
+            <h1
+              style={{
+                color: '#ffffff',
+                margin: 0,
+                fontSize: '36px',
+                fontWeight: '800'
+              }}
+            >
+              {userData?.name}
+            </h1>
+          </div>
 
           <button
             onClick={handleLogout}
             style={{
-              padding: "12px 30px",
-              backgroundColor: "#f44336",
-              color: "white",
-              border: "none",
-              borderRadius: "10px",
-              fontSize: "16px",
-              fontWeight: "bold",
-              cursor: "pointer",
-              transition: "all 0.3s",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
+              padding: '12px 32px',
+              background: 'rgba(239, 68, 68, 0.15)',
+              color: '#ef4444',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              borderRadius: '10px',
+              fontSize: '13px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              textTransform: 'uppercase',
+              letterSpacing: '1px'
             }}
             onMouseOver={(e) => {
-              e.target.style.backgroundColor = "#d32f2f";
-              e.target.style.transform = "translateY(-2px)";
-              e.target.style.boxShadow = "0 4px 12px rgba(244, 67, 54, 0.4)";
+              e.target.style.background = 'rgba(239, 68, 68, 0.25)';
+              e.target.style.transform = 'translateY(-2px)';
             }}
             onMouseOut={(e) => {
-              e.target.style.backgroundColor = "#f44336";
-              e.target.style.transform = "translateY(0)";
-              e.target.style.boxShadow = "none";
+              e.target.style.background = 'rgba(239, 68, 68, 0.15)';
+              e.target.style.transform = 'translateY(0)';
             }}
           >
-            🚪 Logout
+            Sign Out
           </button>
         </div>
 
         {/* User Info Card */}
         <div
           style={{
-            backgroundColor: "#f8f9fa",
-            padding: "30px",
-            borderRadius: "15px",
-            marginBottom: "25px",
-            border: "2px solid #e9ecef",
+            background: 'rgba(0, 255, 255, 0.05)',
+            padding: '30px',
+            borderRadius: '12px',
+            marginBottom: '30px',
+            border: '1px solid rgba(0, 255, 255, 0.15)',
           }}
         >
           <h3
             style={{
-              color: "#667eea",
-              marginBottom: "20px",
-              fontSize: "22px",
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
+              color: '#00ffff',
+              marginBottom: '20px',
+              fontSize: '18px',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              textTransform: 'uppercase',
+              letterSpacing: '1px'
             }}
           >
-            👤 User Information
+            Account Details
           </h3>
 
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-              gap: "15px",
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+              gap: '15px',
             }}
           >
-            <InfoItem label="Name" value={userData?.name || "N/A"} icon="📝" />
-            <InfoItem
-              label="Email"
-              value={userData?.email || "N/A"}
-              icon="📧"
-            />
-            <InfoItem
-              label="Registered On"
-              value={formatDate(userData?.createdAt)}
-              icon="📅"
-            />
-            <InfoItem
-              label="Last Login"
-              value={formatDateTime(userData?.lastLogin)}
-              icon="🕐"
-            />
+            <InfoItem label="Name" value={userData?.name || 'N/A'} />
+            <InfoItem label="Email" value={userData?.email || 'N/A'} />
+            <InfoItem label="Member Since" value={formatDate(userData?.createdAt)} />
+            <InfoItem label="Last Login" value={formatDateTime(userData?.lastLogin)} />
           </div>
         </div>
 
@@ -261,71 +285,58 @@ function Dashboard() {
         {/* Quick Stats */}
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: "20px",
-            marginBottom: "25px",
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: '20px',
+            marginBottom: '30px',
           }}
         >
-          <StatCard
-            icon="🛡️"
-            title="Security Level"
-            value="High"
-            color="#4caf50"
-          />
-          <StatCard
-            icon="👤"
-            title="Account Status"
-            value="Active"
-            color="#2196f3"
-          />
-          <StatCard
-            icon="🔑"
-            title="Auth Method"
-            value="Face ID"
-            color="#ff9800"
-          />
+          <StatCard title="Security Level" value="Maximum" />
+          <StatCard title="Account Status" value="Active" />
+          <StatCard title="Auth Method" value="Face ID" />
         </div>
 
         {/* Account Actions */}
         <div
           style={{
-            backgroundColor: "#fff3e0",
-            padding: "20px",
-            borderRadius: "12px",
-            border: "2px solid #ffb74d",
+            background: 'rgba(0, 200, 200, 0.08)',
+            padding: '25px',
+            borderRadius: '12px',
+            border: '1px solid rgba(0, 200, 200, 0.2)',
           }}
         >
           <h4
             style={{
-              margin: "0 0 15px 0",
-              color: "#e65100",
-              fontSize: "18px",
+              margin: '0 0 15px 0',
+              color: '#00ffff',
+              fontSize: '16px',
+              fontWeight: '600',
+              textTransform: 'uppercase',
+              letterSpacing: '1px'
             }}
           >
-            📌 Quick Actions
+            Quick Actions
           </h4>
           <div
             style={{
-              display: "flex",
-              gap: "10px",
-              flexWrap: "wrap",
+              display: 'flex',
+              gap: '10px',
+              flexWrap: 'wrap',
             }}
           >
             <ActionButton
-              label="🔄 Update Face Data"
-              onClick={() => alert("🚧 Under Development!")}
-              // onClick={() => navigate("/update-face")}
+              label="Update Face"
+              onClick={() => alert("Coming Soon!")}
             />
 
             <ActionButton
-              label="🔒 Change Password"
+              label="Change Password"
               onClick={() => navigate("/change-password")}
             />
 
             <ActionButton
-              label="📊 View Activity"
-              onClick={() => alert("🚧 Under Development!")}
+              label="View Activity"
+              onClick={() => alert("Coming Soon!")}
             />
           </div>
         </div>
@@ -333,54 +344,55 @@ function Dashboard() {
         {/* Footer Info */}
         <div
           style={{
-            marginTop: "30px",
-            padding: "20px",
-            backgroundColor: "#f8f9fa",
-            borderRadius: "10px",
-            textAlign: "center",
-            color: "#666",
-            fontSize: "14px",
+            marginTop: '30px',
+            padding: '20px',
+            background: 'rgba(0, 255, 255, 0.05)',
+            border: '1px solid rgba(0, 255, 255, 0.1)',
+            borderRadius: '10px',
+            textAlign: 'center',
+            color: '#909090',
+            fontSize: '13px',
           }}
         >
           <p style={{ margin: 0 }}>
-            🔐 Your data is encrypted and secured. We never share your biometric
-            information.
+            ✓ Your biometric data is encrypted end-to-end and never shared
           </p>
         </div>
+
       </div>
     </div>
   );
 }
 
 // Helper Component: Info Item
-function InfoItem({ label, value, icon }) {
+function InfoItem({ label, value }) {
   return (
     <div
       style={{
-        padding: "15px",
-        backgroundColor: "white",
-        borderRadius: "10px",
-        border: "1px solid #e0e0e0",
+        padding: '15px',
+        background: 'rgba(0, 255, 255, 0.08)',
+        borderRadius: '8px',
+        border: '1px solid rgba(0, 255, 255, 0.15)',
       }}
     >
       <div
         style={{
-          fontSize: "12px",
-          color: "#999",
-          marginBottom: "5px",
-          fontWeight: "600",
-          textTransform: "uppercase",
-          letterSpacing: "0.5px",
+          fontSize: '11px',
+          color: '#909090',
+          marginBottom: '8px',
+          fontWeight: '600',
+          textTransform: 'uppercase',
+          letterSpacing: '1px',
         }}
       >
-        {icon} {label}
+        {label}
       </div>
       <div
         style={{
-          fontSize: "16px",
-          color: "#333",
-          fontWeight: "600",
-          wordBreak: "break-word",
+          fontSize: '15px',
+          color: '#ffffff',
+          fontWeight: '600',
+          wordBreak: 'break-word',
         }}
       >
         {value}
@@ -390,37 +402,42 @@ function InfoItem({ label, value, icon }) {
 }
 
 // Helper Component: Stat Card
-function StatCard({ icon, title, value, color }) {
+function StatCard({ title, value }) {
   return (
     <div
       style={{
-        padding: "20px",
-        backgroundColor: "white",
-        borderRadius: "12px",
-        border: `2px solid ${color}20`,
-        textAlign: "center",
-        transition: "transform 0.3s",
+        padding: '20px',
+        background: 'rgba(0, 255, 255, 0.08)',
+        borderRadius: '12px',
+        border: '1px solid rgba(0, 255, 255, 0.15)',
+        textAlign: 'center',
+        transition: 'all 0.3s',
       }}
-      onMouseOver={(e) =>
-        (e.currentTarget.style.transform = "translateY(-5px)")
-      }
-      onMouseOut={(e) => (e.currentTarget.style.transform = "translateY(0)")}
+      onMouseOver={(e) => {
+        e.currentTarget.style.background = 'rgba(0, 255, 255, 0.15)';
+        e.currentTarget.style.transform = 'translateY(-5px)';
+      }}
+      onMouseOut={(e) => {
+        e.currentTarget.style.background = 'rgba(0, 255, 255, 0.08)';
+        e.currentTarget.style.transform = 'translateY(0)';
+      }}
     >
-      <div style={{ fontSize: "36px", marginBottom: "10px" }}>{icon}</div>
       <div
         style={{
-          fontSize: "14px",
-          color: "#666",
-          marginBottom: "5px",
+          fontSize: '12px',
+          color: '#909090',
+          marginBottom: '10px',
+          textTransform: 'uppercase',
+          letterSpacing: '1px'
         }}
       >
         {title}
       </div>
       <div
         style={{
-          fontSize: "20px",
-          fontWeight: "bold",
-          color: color,
+          fontSize: '20px',
+          fontWeight: 'bold',
+          color: '#00ffff',
         }}
       >
         {value}
@@ -435,23 +452,25 @@ function ActionButton({ label, onClick }) {
     <button
       onClick={onClick}
       style={{
-        padding: "10px 20px",
-        backgroundColor: "white",
-        color: "#e65100",
-        border: "2px solid #ffb74d",
-        borderRadius: "8px",
-        fontSize: "14px",
-        fontWeight: "bold",
-        cursor: "pointer",
-        transition: "all 0.3s",
+        padding: '12px 20px',
+        background: 'rgba(0, 255, 255, 0.1)',
+        color: '#00ffff',
+        border: '1px solid rgba(0, 255, 255, 0.3)',
+        borderRadius: '8px',
+        fontSize: '13px',
+        fontWeight: '600',
+        cursor: 'pointer',
+        transition: 'all 0.3s',
+        textTransform: 'uppercase',
+        letterSpacing: '0.5px'
       }}
       onMouseOver={(e) => {
-        e.target.style.backgroundColor = "#ffb74d";
-        e.target.style.color = "white";
+        e.target.style.background = 'rgba(0, 255, 255, 0.2)';
+        e.target.style.transform = 'translateY(-2px)';
       }}
       onMouseOut={(e) => {
-        e.target.style.backgroundColor = "white";
-        e.target.style.color = "#e65100";
+        e.target.style.background = 'rgba(0, 255, 255, 0.1)';
+        e.target.style.transform = 'translateY(0)';
       }}
     >
       {label}

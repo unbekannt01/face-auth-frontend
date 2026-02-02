@@ -1,3 +1,5 @@
+'use client';
+
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -43,10 +45,10 @@ function VerificationSuccess() {
     }
 
     if (isMobileDevice()) {
-      console.log(" Mobile detected → redirecting to home");
+      console.log("📱 Mobile detected → redirecting to home");
       navigate("/");
     } else {
-      console.log(" Desktop detected → closing tab");
+      console.log("💻 Desktop detected → closing tab");
 
       window.open("", "_self");
       window.close();
@@ -96,13 +98,13 @@ function VerificationSuccess() {
           </div>
         </div>
 
-        <h1 style={styles.title}> Verification Successful!</h1>
+        <h1 style={styles.title}>✓ Verification Successful!</h1>
 
         <p style={styles.message}>Your face has been verified successfully.</p>
 
         <div style={styles.infoBox}>
           <p style={styles.infoText}>
-             Return to your computer to complete the process.
+            💻 Return to your computer to complete the process.
           </p>
           <p style={styles.infoSubtext}>
             You can safely close this mobile tab.
@@ -125,26 +127,26 @@ function VerificationSuccess() {
 
         <div style={styles.buttonGroup}>
           <button onClick={handleBackToComputer} style={styles.primaryButton}>
-             Return to Computer
+            💻 Return to Computer
           </button>
 
           <button onClick={handleCloseWindow} style={styles.secondaryButton}>
-             Close This Tab
+            ✕ Close This Tab
           </button>
         </div>
 
         <div style={styles.successDetails}>
           <h3 style={styles.detailsTitle}>What's Next?</h3>
           <ul style={styles.detailsList}>
-            <li> Go back to your computer</li>
-            <li> Your login/registration will complete automatically</li>
-            <li> You're all set!</li>
+            <li>✓ Go back to your computer</li>
+            <li>✓ Your login/registration will complete automatically</li>
+            <li>✓ You're all set!</li>
           </ul>
         </div>
 
         <div style={styles.mobileNote}>
           <p style={styles.mobileNoteText}>
-             <strong>Mobile Users:</strong> You will be redirected to the home
+            📱 <strong>Mobile Users:</strong> You will be redirected to the home
             page automatically.
           </p>
         </div>
@@ -152,23 +154,29 @@ function VerificationSuccess() {
     </div>
   );
 }
+
 const styles = {
   container: {
     minHeight: "100vh",
-    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    background: "#050816",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     padding: "20px",
+    position: "relative",
   },
   card: {
-    backgroundColor: "white",
-    borderRadius: "24px",
-    padding: "40px",
+    background: "linear-gradient(135deg, rgba(20, 24, 82, 0.8), rgba(30, 30, 70, 0.6))",
+    border: "1px solid rgba(0, 212, 255, 0.2)",
+    borderRadius: "20px",
+    padding: "50px",
     maxWidth: "500px",
     width: "100%",
-    boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+    boxShadow: "0 20px 60px rgba(0, 212, 255, 0.2), 0 0 40px rgba(0, 212, 255, 0.1)",
+    backdropFilter: "blur(20px)",
     textAlign: "center",
+    position: "relative",
+    zIndex: 1,
   },
   iconContainer: {
     display: "flex",
@@ -181,11 +189,10 @@ const styles = {
     borderRadius: "50%",
     display: "block",
     strokeWidth: "3",
-    stroke: "#4CAF50",
+    stroke: "#00d4ff",
     strokeMiterlimit: "10",
-    boxShadow: "inset 0px 0px 0px #4CAF50",
-    animation:
-      "fill 0.4s ease-in-out 0.4s forwards, scale 0.3s ease-in-out 0.9s both",
+    boxShadow: "inset 0px 0px 0px #00d4ff, 0 0 30px rgba(0, 212, 255, 0.4)",
+    animation: "fill 0.4s ease-in-out 0.4s forwards, scale 0.3s ease-in-out 0.9s both",
   },
   checkmark: {
     width: "100px",
@@ -195,9 +202,8 @@ const styles = {
     strokeWidth: "3",
     stroke: "#fff",
     strokeMiterlimit: "10",
-    boxShadow: "inset 0px 0px 0px #4CAF50",
-    animation:
-      "fill 0.4s ease-in-out 0.4s forwards, scale 0.3s ease-in-out 0.9s both",
+    boxShadow: "inset 0px 0px 0px #00d4ff",
+    animation: "fill 0.4s ease-in-out 0.4s forwards, scale 0.3s ease-in-out 0.9s both",
   },
   checkmarkCheck: {
     transformOrigin: "50% 50%",
@@ -207,55 +213,58 @@ const styles = {
   },
   title: {
     fontSize: "32px",
-    fontWeight: "bold",
-    color: "#1e293b",
+    fontWeight: "800",
+    color: "#fff",
     marginBottom: "15px",
     margin: "0 0 15px 0",
   },
   message: {
-    fontSize: "18px",
-    color: "#64748b",
+    fontSize: "16px",
+    color: "#b0b0c9",
     marginBottom: "30px",
+    lineHeight: "1.6",
   },
   infoBox: {
-    backgroundColor: "#dcfce7",
+    background: "rgba(0, 212, 255, 0.1)",
     padding: "20px",
     borderRadius: "12px",
-    border: "2px solid #86efac",
+    border: "1px solid rgba(0, 212, 255, 0.3)",
     marginBottom: "30px",
   },
   infoText: {
     margin: "0 0 10px 0",
-    color: "#166534",
-    fontSize: "16px",
-    fontWeight: "600",
+    color: "#00d4ff",
+    fontSize: "15px",
+    fontWeight: "700",
   },
   infoSubtext: {
     margin: 0,
-    color: "#166534",
-    fontSize: "14px",
+    color: "#b0b0c9",
+    fontSize: "13px",
     fontWeight: "500",
   },
   progressContainer: {
     marginBottom: "30px",
   },
   progressText: {
-    fontSize: "14px",
-    color: "#64748b",
-    marginBottom: "10px",
-    fontWeight: "500",
+    fontSize: "13px",
+    color: "#b0b0c9",
+    marginBottom: "12px",
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
   },
   progressBar: {
     width: "100%",
-    height: "8px",
-    backgroundColor: "#e2e8f0",
-    borderRadius: "4px",
+    height: "6px",
+    background: "rgba(0, 212, 255, 0.1)",
+    borderRadius: "3px",
     overflow: "hidden",
   },
   progressFill: {
     height: "100%",
-    backgroundColor: "#667eea",
-    borderRadius: "4px",
+    background: "linear-gradient(90deg, #00d4ff, #6366f1)",
+    borderRadius: "3px",
     transition: "width 1s linear",
   },
   buttonGroup: {
@@ -267,67 +276,73 @@ const styles = {
   primaryButton: {
     flex: 1,
     minWidth: "200px",
-    padding: "15px",
-    fontSize: "16px",
-    fontWeight: "bold",
-    backgroundColor: "#667eea",
-    color: "white",
+    padding: "14px",
+    fontSize: "15px",
+    fontWeight: "700",
+    background: "linear-gradient(135deg, #00d4ff, #6366f1)",
+    color: "#000",
     border: "none",
-    borderRadius: "12px",
+    borderRadius: "10px",
     cursor: "pointer",
-    transition: "background-color 0.3s",
-    boxShadow: "0 4px 12px rgba(102, 126, 234, 0.3)",
+    transition: "all 0.3s ease",
+    boxShadow: "0 10px 30px rgba(0, 212, 255, 0.3)",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
   },
   secondaryButton: {
     flex: 1,
     minWidth: "200px",
-    padding: "15px",
-    fontSize: "16px",
-    fontWeight: "bold",
-    backgroundColor: "#f1f5f9",
-    color: "#64748b",
-    border: "2px solid #e2e8f0",
-    borderRadius: "12px",
+    padding: "14px",
+    fontSize: "15px",
+    fontWeight: "700",
+    background: "rgba(0, 212, 255, 0.15)",
+    color: "#00d4ff",
+    border: "1px solid rgba(0, 212, 255, 0.3)",
+    borderRadius: "10px",
     cursor: "pointer",
-    transition: "all 0.3s",
+    transition: "all 0.3s ease",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
   },
   successDetails: {
-    backgroundColor: "#f8fafc",
+    background: "rgba(0, 212, 255, 0.08)",
     padding: "20px",
     borderRadius: "12px",
-    border: "1px solid #e2e8f0",
+    border: "1px solid rgba(0, 212, 255, 0.2)",
     textAlign: "left",
     marginBottom: "20px",
   },
   detailsTitle: {
-    fontSize: "18px",
-    fontWeight: "bold",
-    color: "#1e293b",
+    fontSize: "16px",
+    fontWeight: "700",
+    color: "#b0b0c9",
     marginBottom: "15px",
     margin: "0 0 15px 0",
+    textTransform: "uppercase",
+    letterSpacing: "1px",
   },
   detailsList: {
     margin: 0,
     paddingLeft: "20px",
-    color: "#64748b",
+    color: "#b0b0c9",
     lineHeight: "2",
-    fontSize: "15px",
+    fontSize: "13px",
   },
   mobileNote: {
-    backgroundColor: "#fff3cd",
+    background: "rgba(0, 212, 255, 0.1)",
     padding: "15px",
     borderRadius: "10px",
-    border: "2px solid #ffc107",
+    border: "1px solid rgba(0, 212, 255, 0.3)",
   },
   mobileNoteText: {
     margin: 0,
     fontSize: "13px",
-    color: "#856404",
+    color: "#b0b0c9",
     lineHeight: "1.6",
+    fontWeight: "500",
   },
 };
 
-// Add CSS animations
 const styleSheet = document.createElement("style");
 styleSheet.innerText = `
   @keyframes stroke {
@@ -347,7 +362,7 @@ styleSheet.innerText = `
   
   @keyframes fill {
     100% {
-      box-shadow: inset 0px 0px 0px 30px #4CAF50;
+      box-shadow: inset 0px 0px 0px 30px #00d4ff;
     }
   }
 

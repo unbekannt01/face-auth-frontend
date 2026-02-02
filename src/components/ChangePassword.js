@@ -1,3 +1,5 @@
+'use client';
+
 // src/components/ChangePassword.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -26,7 +28,6 @@ function ChangePassword() {
   });
 
   useEffect(() => {
-    // Check if user is logged in
     const token = localStorage.getItem('authToken');
     if (!token) {
       navigate('/login');
@@ -34,7 +35,6 @@ function ChangePassword() {
     }
   }, [navigate]);
 
-  // Calculate password strength
   useEffect(() => {
     const password = formData.newPassword;
     if (!password) {
@@ -46,26 +46,22 @@ function ChangePassword() {
     let label = '';
     let color = '';
 
-    // Length check
     if (password.length >= 8) score++;
     if (password.length >= 12) score++;
-
-    // Character variety
     if (/[a-z]/.test(password)) score++;
     if (/[A-Z]/.test(password)) score++;
     if (/[0-9]/.test(password)) score++;
     if (/[^A-Za-z0-9]/.test(password)) score++;
 
-    // Determine strength
     if (score <= 2) {
       label = 'Weak';
       color = '#dc3545';
     } else if (score <= 4) {
       label = 'Medium';
-      color = '#ffc107';
+      color = '#fbbf24';
     } else {
       label = 'Strong';
-      color = '#28a745';
+      color = '#00d4ff';
     }
 
     setPasswordStrength({ score, label, color });
@@ -90,28 +86,27 @@ function ChangePassword() {
     const { currentPassword, newPassword, confirmPassword } = formData;
 
     if (!currentPassword || !newPassword || !confirmPassword) {
-      setError(' All fields are required');
+      setError('✗ All fields are required');
       return false;
     }
 
     if (newPassword.length < 8) {
-      setError(' New password must be at least 8 characters long');
+      setError('✗ New password must be at least 8 characters long');
       return false;
     }
 
     if (newPassword === currentPassword) {
-      setError(' New password must be different from current password');
+      setError('✗ New password must be different from current password');
       return false;
     }
 
     if (newPassword !== confirmPassword) {
-      setError(' New password and confirm password do not match');
+      setError('✗ New password and confirm password do not match');
       return false;
     }
 
-    // Check password strength
     if (passwordStrength.score < 3) {
-      setError(' Password is too weak. Use a mix of uppercase, lowercase, numbers, and symbols');
+      setError('✗ Password is too weak. Use a mix of uppercase, lowercase, numbers, and symbols');
       return false;
     }
 
@@ -139,8 +134,6 @@ function ChangePassword() {
         return;
       }
 
-      console.log('[ChangePassword] Sending request to change password...');
-
       const response = await axios.put(
         `${config.API_URL}/api/auth/change-password`,
         {
@@ -155,19 +148,15 @@ function ChangePassword() {
         }
       );
 
-      console.log('[ChangePassword] Response:', response.data);
-
       if (response.data.success) {
-        setSuccess(' Password changed successfully! Logging out...');
+        setSuccess('✓ Password changed successfully! Logging out...');
         
-        // Clear form
         setFormData({
           currentPassword: '',
           newPassword: '',
           confirmPassword: ''
         });
 
-        // Logout after 2 seconds
         setTimeout(() => {
           localStorage.removeItem('authToken');
           localStorage.removeItem('user');
@@ -180,8 +169,6 @@ function ChangePassword() {
         setLoading(false);
       }
     } catch (err) {
-      console.error('[ChangePassword] Error:', err);
-      
       let errorMsg = 'Failed to change password. Please try again.';
       
       if (err.response?.status === 401) {
@@ -203,8 +190,10 @@ function ChangePassword() {
 
   return (
     <div style={styles.container}>
+      {/* Background */}
+      <div style={styles.bgOrb}></div>
+
       <div style={styles.card}>
-        {/* Header */}
         <div style={styles.header}>
           <button onClick={handleCancel} style={styles.backBtn}>
             ← Back
@@ -217,7 +206,6 @@ function ChangePassword() {
           Update your password to keep your account secure
         </p>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} style={styles.form}>
           {/* Current Password */}
           <div style={styles.inputGroup}>
@@ -264,7 +252,6 @@ function ChangePassword() {
               </button>
             </div>
             
-            {/* Password Strength Meter */}
             {formData.newPassword && (
               <div style={styles.strengthContainer}>
                 <div style={styles.strengthBar}>
@@ -305,11 +292,10 @@ function ChangePassword() {
               </button>
             </div>
             
-            {/* Match Indicator */}
             {formData.confirmPassword && (
               <div style={styles.matchIndicator}>
                 {formData.newPassword === formData.confirmPassword ? (
-                  <span style={{ color: '#28a745' }}>✓ Passwords match</span>
+                  <span style={{ color: '#00d4ff' }}>✓ Passwords match</span>
                 ) : (
                   <span style={{ color: '#dc3545' }}>✗ Passwords do not match</span>
                 )}
@@ -317,7 +303,6 @@ function ChangePassword() {
             )}
           </div>
 
-          {/* Error/Success Messages */}
           {error && (
             <div style={styles.errorBox}>
               {error}
@@ -330,7 +315,6 @@ function ChangePassword() {
             </div>
           )}
 
-          {/* Buttons */}
           <div style={styles.buttonGroup}>
             <button
               type="submit"
@@ -341,7 +325,7 @@ function ChangePassword() {
                 cursor: loading ? 'not-allowed' : 'pointer'
               }}
             >
-              {loading ? '⏳ Changing...' : ' Change Password'}
+              {loading ? '⏳ Changing...' : '✓ Change Password'}
             </button>
             
             <button
@@ -355,7 +339,6 @@ function ChangePassword() {
           </div>
         </form>
 
-        {/* Password Requirements */}
         <div style={styles.requirementsBox}>
           <h3 style={styles.requirementsTitle}>📋 Password Requirements:</h3>
           <ul style={styles.requirementsList}>
@@ -382,7 +365,6 @@ function ChangePassword() {
           </ul>
         </div>
 
-        {/* Security Notice */}
         <div style={styles.securityNotice}>
           <span style={{ fontSize: '24px' }}>🔐</span>
           <div>
@@ -398,9 +380,8 @@ function ChangePassword() {
   );
 }
 
-// Helper function for requirement styling
 const getRequirementStyle = (met) => ({
-  color: met ? '#28a745' : '#6c757d',
+  color: met ? '#00d4ff' : '#6c757d',
   fontWeight: met ? 'bold' : 'normal',
   transition: 'all 0.3s'
 });
@@ -408,19 +389,36 @@ const getRequirementStyle = (met) => ({
 const styles = {
   container: {
     minHeight: '100vh',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    background: '#050816',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '20px'
+    padding: '20px',
+    position: 'relative'
+  },
+  bgOrb: {
+    position: 'fixed',
+    width: '600px',
+    height: '600px',
+    top: '-10%',
+    right: '-5%',
+    background: 'radial-gradient(circle, rgba(0, 212, 255, 0.15), transparent 70%)',
+    borderRadius: '50%',
+    filter: 'blur(80px)',
+    zIndex: 0,
+    pointerEvents: 'none'
   },
   card: {
-    backgroundColor: 'white',
+    background: 'linear-gradient(135deg, rgba(20, 24, 82, 0.8), rgba(30, 30, 70, 0.6))',
+    border: '1px solid rgba(0, 212, 255, 0.2)',
     borderRadius: '20px',
-    padding: '40px',
+    padding: '50px',
     maxWidth: '600px',
     width: '100%',
-    boxShadow: '0 10px 40px rgba(0,0,0,0.3)'
+    boxShadow: '0 20px 60px rgba(0, 212, 255, 0.2)',
+    backdropFilter: 'blur(20px)',
+    position: 'relative',
+    zIndex: 1
   },
   header: {
     display: 'flex',
@@ -430,26 +428,27 @@ const styles = {
   },
   backBtn: {
     padding: '10px 20px',
-    backgroundColor: '#6c757d',
-    color: 'white',
-    border: 'none',
+    background: 'rgba(0, 212, 255, 0.15)',
+    border: '1px solid rgba(0, 212, 255, 0.3)',
+    color: '#00d4ff',
     borderRadius: '8px',
     cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: 'bold',
-    transition: 'background-color 0.3s'
+    fontSize: '13px',
+    fontWeight: '600',
+    transition: 'all 0.3s ease'
   },
   title: {
     fontSize: '28px',
     margin: 0,
-    color: '#333',
+    color: '#fff',
     textAlign: 'center',
-    flex: 1
+    flex: 1,
+    fontWeight: '800'
   },
   subtitle: {
     textAlign: 'center',
-    color: '#666',
-    fontSize: '14px',
+    color: '#b0b0c9',
+    fontSize: '13px',
     marginBottom: '30px'
   },
   form: {
@@ -463,9 +462,11 @@ const styles = {
     gap: '8px'
   },
   label: {
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#333'
+    fontSize: '13px',
+    fontWeight: '700',
+    color: '#b0b0c9',
+    textTransform: 'uppercase',
+    letterSpacing: '1px'
   },
   passwordContainer: {
     position: 'relative',
@@ -474,67 +475,77 @@ const styles = {
   },
   input: {
     width: '100%',
-    padding: '12px 45px 12px 15px',
-    border: '2px solid #e0e0e0',
+    padding: '12px 45px 12px 16px',
+    border: '1px solid rgba(0, 212, 255, 0.2)',
     borderRadius: '10px',
-    fontSize: '16px',
+    fontSize: '14px',
     outline: 'none',
-    transition: 'border 0.3s',
-    boxSizing: 'border-box'
+    background: 'rgba(0, 212, 255, 0.05)',
+    color: '#fff',
+    transition: 'all 0.3s ease',
+    boxSizing: 'border-box',
+    fontFamily: 'inherit'
   },
   eyeBtn: {
     position: 'absolute',
-    right: '10px',
+    right: '12px',
     background: 'none',
     border: 'none',
-    fontSize: '20px',
+    fontSize: '18px',
     cursor: 'pointer',
-    padding: '5px'
+    padding: '5px',
+    color: '#00d4ff'
   },
   strengthContainer: {
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
-    marginTop: '5px'
+    marginTop: '8px'
   },
   strengthBar: {
     flex: 1,
-    height: '8px',
-    backgroundColor: '#e0e0e0',
-    borderRadius: '4px',
+    height: '6px',
+    background: 'rgba(0, 212, 255, 0.1)',
+    borderRadius: '3px',
     overflow: 'hidden'
   },
   strengthFill: {
     height: '100%',
-    transition: 'all 0.3s'
+    transition: 'all 0.3s ease',
+    borderRadius: '3px'
   },
   strengthLabel: {
     fontSize: '12px',
-    fontWeight: 'bold',
-    minWidth: '60px'
+    fontWeight: '700',
+    minWidth: '70px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px'
   },
   matchIndicator: {
-    fontSize: '13px',
+    fontSize: '12px',
     fontWeight: '600',
-    marginTop: '5px'
+    marginTop: '6px',
+    color: '#b0b0c9'
   },
   errorBox: {
-    padding: '12px',
-    backgroundColor: '#fee',
-    border: '2px solid #fcc',
+    padding: '12px 14px',
+    background: 'rgba(239, 68, 68, 0.1)',
+    border: '1px solid rgba(239, 68, 68, 0.3)',
     borderRadius: '8px',
-    color: '#c00',
-    fontWeight: 'bold',
-    textAlign: 'center'
+    color: '#ef4444',
+    fontWeight: '600',
+    textAlign: 'center',
+    fontSize: '13px'
   },
   successBox: {
-    padding: '12px',
-    backgroundColor: '#efe',
-    border: '2px solid #cfc',
+    padding: '12px 14px',
+    background: 'rgba(0, 212, 255, 0.1)',
+    border: '1px solid rgba(0, 212, 255, 0.3)',
     borderRadius: '8px',
-    color: '#0a0',
-    fontWeight: 'bold',
-    textAlign: 'center'
+    color: '#00d4ff',
+    fontWeight: '600',
+    textAlign: 'center',
+    fontSize: '13px'
   },
   buttonGroup: {
     display: 'flex',
@@ -543,57 +554,63 @@ const styles = {
   },
   submitBtn: {
     flex: 1,
-    padding: '15px',
-    backgroundColor: '#28a745',
-    color: 'white',
+    padding: '14px',
+    background: 'linear-gradient(135deg, #00d4ff, #6366f1)',
+    color: '#000',
     border: 'none',
     borderRadius: '10px',
-    fontSize: '16px',
-    fontWeight: 'bold',
-    transition: 'all 0.3s'
+    fontSize: '14px',
+    fontWeight: '700',
+    transition: 'all 0.3s ease',
+    cursor: 'pointer',
+    boxShadow: '0 10px 30px rgba(0, 212, 255, 0.2)'
   },
   cancelBtn: {
     flex: 1,
-    padding: '15px',
-    backgroundColor: '#dc3545',
-    color: 'white',
-    border: 'none',
+    padding: '14px',
+    background: 'rgba(239, 68, 68, 0.15)',
+    color: '#ef4444',
+    border: '1px solid rgba(239, 68, 68, 0.3)',
     borderRadius: '10px',
-    fontSize: '16px',
-    fontWeight: 'bold',
+    fontSize: '14px',
+    fontWeight: '700',
     cursor: 'pointer',
-    transition: 'background-color 0.3s'
+    transition: 'all 0.3s ease'
   },
   requirementsBox: {
     marginTop: '25px',
     padding: '20px',
-    backgroundColor: '#f8f9fa',
+    background: 'rgba(0, 212, 255, 0.08)',
     borderRadius: '12px',
-    border: '1px solid #dee2e6'
+    border: '1px solid rgba(0, 212, 255, 0.2)'
   },
   requirementsTitle: {
     margin: '0 0 15px 0',
-    fontSize: '16px',
-    color: '#333'
+    fontSize: '14px',
+    color: '#b0b0c9',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: '1px'
   },
   requirementsList: {
     margin: 0,
     paddingLeft: '25px',
-    fontSize: '14px',
+    fontSize: '13px',
     lineHeight: '2',
-    listStyle: 'none'
+    listStyle: 'none',
+    color: '#b0b0c9'
   },
   securityNotice: {
     marginTop: '20px',
     padding: '15px',
-    backgroundColor: '#fff3cd',
+    background: 'rgba(0, 212, 255, 0.1)',
     borderRadius: '10px',
-    border: '2px solid #ffc107',
+    border: '1px solid rgba(0, 212, 255, 0.3)',
     display: 'flex',
     gap: '15px',
     alignItems: 'flex-start',
-    fontSize: '14px',
-    color: '#856404'
+    fontSize: '13px',
+    color: '#b0b0c9'
   }
 };
 

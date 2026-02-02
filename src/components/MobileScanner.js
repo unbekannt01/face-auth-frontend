@@ -1,3 +1,5 @@
+'use client';
+
 /* eslint-disable react-hooks/exhaustive-deps */
 // frontend/src/components/MobileScanner.jsx
 
@@ -124,14 +126,15 @@ function MobileScanner() {
 
       <p style={{
         ...styles.status,
-        backgroundColor: scanning ? '#4caf50' : '#333'
+        backgroundColor: scanning ? '#00d4ff' : 'rgba(0, 212, 255, 0.15)',
+        color: scanning ? '#000' : '#00d4ff'
       }}>
         {status}
       </p>
 
       <div style={styles.helpBox}>
-        <strong>Instructions:</strong>
-        <ul>
+        <strong style={{color: '#00d4ff'}}>Instructions:</strong>
+        <ul style={styles.instructionList}>
           <li>Allow camera access</li>
           <li>Point camera at QR code</li>
           <li>Hold steady</li>
@@ -145,64 +148,94 @@ function MobileScanner() {
 const styles = {
   wrapper: {
     minHeight: '100vh',
-    background: '#111',
+    background: '#050816',
     color: '#fff',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20
+    padding: '20px',
+    position: 'relative'
   },
   header: {
     display: 'flex',
     width: '100%',
-    maxWidth: 500,
+    maxWidth: '500px',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 15
+    marginBottom: '25px'
   },
-  heading: { margin: 0 },
+  heading: {
+    margin: '0',
+    fontSize: '28px',
+    fontWeight: '800',
+    background: 'linear-gradient(135deg, #00d4ff, #6366f1)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    backgroundClip: 'text'
+  },
   closeBtn: {
-    width: 40,
-    height: 40,
+    width: '40px',
+    height: '40px',
     borderRadius: '50%',
-    border: '2px solid #fff',
-    background: 'transparent',
-    color: '#fff',
-    fontSize: 24,
-    cursor: 'pointer'
+    border: '2px solid rgba(0, 212, 255, 0.5)',
+    background: 'rgba(0, 212, 255, 0.1)',
+    color: '#00d4ff',
+    fontSize: '24px',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    fontWeight: 'bold'
   },
   cameraBox: {
     width: '100%',
-    maxWidth: 500,
+    maxWidth: '500px',
     position: 'relative',
-    borderRadius: 12,
+    borderRadius: '16px',
     overflow: 'hidden',
-    boxShadow: '0 0 15px rgba(0,0,0,0.6)'
+    boxShadow: '0 20px 60px rgba(0, 212, 255, 0.3)',
+    border: '2px solid rgba(0, 212, 255, 0.3)',
+    animation: 'glowPulse 3s ease-in-out infinite'
   },
-  video: { width: '100%' },
+  video: { 
+    width: '100%',
+    display: 'block'
+  },
   scanBox: {
     position: 'absolute',
-    inset: 40,
-    border: '3px solid #4caf50',
-    borderRadius: 12,
-    pointerEvents: 'none'
+    inset: '40px',
+    border: '3px solid #00d4ff',
+    borderRadius: '12px',
+    pointerEvents: 'none',
+    boxShadow: 'inset 0 0 20px rgba(0, 212, 255, 0.4)'
   },
   status: {
-    marginTop: 25,
-    padding: 12,
-    borderRadius: 8,
-    minWidth: 280,
+    marginTop: '25px',
+    padding: '14px 20px',
+    borderRadius: '10px',
+    minWidth: '280px',
     textAlign: 'center',
-    fontWeight: 'bold'
+    fontWeight: '700',
+    border: '1px solid rgba(0, 212, 255, 0.3)',
+    fontSize: '14px',
+    textTransform: 'uppercase',
+    letterSpacing: '1px',
+    transition: 'all 0.3s ease'
   },
   helpBox: {
-    marginTop: 15,
-    padding: 12,
-    background: '#222',
-    borderRadius: 8,
-    maxWidth: 400,
-    fontSize: 13
+    marginTop: '20px',
+    padding: '20px',
+    background: 'rgba(0, 212, 255, 0.08)',
+    borderRadius: '12px',
+    maxWidth: '400px',
+    fontSize: '13px',
+    color: '#b0b0c9',
+    border: '1px solid rgba(0, 212, 255, 0.2)',
+    fontWeight: '500'
+  },
+  instructionList: {
+    margin: '10px 0 0 0',
+    paddingLeft: '20px',
+    lineHeight: '2'
   }
 };
 

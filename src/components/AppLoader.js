@@ -14,8 +14,8 @@ export default function Loader() {
         <div className="scan-bar"></div>
       </div>
 
-      <p className="scan-text">Loading Secure Experience...</p>
-      <p className="scan-sub">Please Wait</p>
+      <p className="scan-text">Verifying Identity...</p>
+      <p className="scan-sub">Biometric Authentication in Progress</p>
     </div>
   );
 }
