@@ -24,6 +24,7 @@ function Home() {
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showSecurityModal, setShowSecurityModal] = useState(false);
   const [showServerModal, setShowServerModal] = useState(false);
+  const [showServerStatusModal, setShowServerStatusModal] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [scrollY, setScrollY] = useState(0);
   const heroRef = useRef(null);
@@ -869,6 +870,12 @@ function Home() {
               >
                 Security
               </button>
+              <button
+                onClick={() => setShowServerStatusModal(true)}
+                style={styles.footerLink}
+              >
+                Server Status & Contact
+              </button>
             </div>
           </div>
         </div>
@@ -883,6 +890,14 @@ function Home() {
       {showServerModal && (
         <ServerActivationModal
           onClose={() => setShowServerModal(false)}
+          onSubmit={handleActivateServer}
+          emailSent={emailSent}
+          isMobile={isMobile}
+        />
+      )}
+      {showServerStatusModal && (
+        <ServerActivationModal
+          onClose={() => setShowServerStatusModal(false)}
           onSubmit={handleActivateServer}
           emailSent={emailSent}
           isMobile={isMobile}
@@ -951,7 +966,140 @@ function Home() {
   );
 }
 
-// Server Activation Modal
+// // Server Status & Contact Modal (New Funny Version)
+// function ServerStatusModal({ onClose, onSubmit, emailSent, isMobile }) {
+//   return (
+//     <div style={styles.modalOverlay} onClick={onClose}>
+//       <div
+//         style={{
+//           ...styles.serverModalContent,
+//           padding: isMobile ? "30px 20px" : "50px 40px",
+//           maxWidth: isMobile ? "calc(100vw - 32px)" : "550px",
+//         }}
+//         onClick={(e) => e.stopPropagation()}
+//       >
+//         <div style={styles.serverModalIcon}>😴💤</div>
+//         <h2
+//           style={{
+//             ...styles.serverModalTitle,
+//             fontSize: isMobile ? "20px" : "28px",
+//           }}
+//         >
+//           Shhh... Our Server is Catching Some Z's! 🛌✨
+//         </h2>
+//         <p style={styles.serverModalText}>
+//           💤 We're using a free hosting tier, which means our server goes into
+//           sleep mode when not in use (like a smart power-saving laptop!). Think
+//           of it as our server taking a well-deserved nap. 🌙
+//         </p>
+//         <p style={styles.serverModalSubtext}>
+//           🚀 <strong>Good news:</strong> Just click the wake-up button below and
+//           we'll send a gentle nudge to our server! It usually takes about 2-3
+//           minutes to stretch, yawn, and get back to work. ☕️
+//         </p>
+//         <p style={styles.serverModalSubtext}>
+//           🐛 Found a bug? Have a question? Want to say hi? Drop us a message
+//           using the form below and we'll wake up the server AND get back to you
+//           faster than you can say "localhost"! ⚡
+//         </p>
+
+//         <div style={styles.warningBox}>
+//           <span style={styles.warningIcon}>⚠️</span>
+//           <p style={styles.warningText}>
+//             <strong>Pro tip:</strong> After clicking the wake-up button, please
+//             wait a bit before trying again. Our servers need some time to fully
+//             boot up! Multiple requests won't speed up the process—they'll just
+//             make our server grumpy. 😅
+//           </p>
+//         </div>
+
+//         {!emailSent ? (
+//           <form
+//             action="https://formsubmit.co/testing.buddy1111@gmail.com"
+//             method="POST"
+//             onSubmit={onSubmit}
+//             style={styles.serverForm}
+//           >
+//             <input
+//               type="hidden"
+//               name="_subject"
+//               value="🚀 NeuroVerify Server Wake-Up Request!"
+//             />
+//             <input type="hidden" name="_captcha" value="false" />
+//             <input type="hidden" name="_template" value="box" />
+//             <input type="hidden" name="_next" value={window.location.href} />
+//             <input
+//               type="hidden"
+//               name="Message"
+//               value="A user is trying to access NeuroVerify. Please wake up the Render server! 🌟"
+//             />
+//             <input
+//               type="hidden"
+//               name="Timestamp"
+//               value={new Date().toLocaleString("en-US", {
+//                 timeZone: "Asia/Kolkata",
+//               })}
+//             />
+//             <input
+//               type="hidden"
+//               name="Request-Type"
+//               value="Server Activation"
+//             />
+//             <button
+//               type="submit"
+//               style={{
+//                 ...styles.serverActivateBtn,
+//                 padding: isMobile ? "14px 24px" : "18px 40px",
+//                 fontSize: isMobile ? "15px" : "18px",
+//               }}
+//               onMouseEnter={(e) => {
+//                 e.target.style.transform = "scale(1.05)";
+//                 e.target.style.boxShadow = "0 15px 50px rgba(0, 212, 255, 0.6)";
+//               }}
+//               onMouseLeave={(e) => {
+//                 e.target.style.transform = "scale(1)";
+//                 e.target.style.boxShadow = "0 10px 40px rgba(0, 212, 255, 0.4)";
+//               }}
+//             >
+//               🚀 Wake Up the Server
+//             </button>
+//           </form>
+//         ) : (
+//           <div style={styles.successMessage}>
+//             <div style={styles.successIcon}>✅</div>
+//             <p style={styles.successText}>
+//               Wake-up call sent! The server should be ready soon.
+//             </p>
+//             <p style={styles.successSubtext}>
+//               Refresh the page and try logging in again shortly!
+//             </p>
+//           </div>
+//         )}
+
+//         <p
+//           style={{
+//             ...styles.serverModalSubtext,
+//             marginTop: "15px",
+//             textAlign: "center",
+//           }}
+//         >
+//           ⏰ We'll wake up the server and respond ASAP!
+//         </p>
+
+//         <button
+//           onClick={onClose}
+//           style={styles.serverModalClose}
+//           onMouseEnter={(e) => (e.target.style.color = "#00d4ff")}
+//           onMouseLeave={(e) => (e.target.style.color = "#8a8fa8")}
+//         >
+//           I'll wait and try later
+//         </button>
+//       </div>
+//     </div>
+//   );
+// }
+
+// Server Activation Modal (Initial Popup)
 function ServerActivationModal({ onClose, onSubmit, emailSent, isMobile }) {
   return (
     <div style={styles.modalOverlay} onClick={onClose}>
@@ -970,7 +1118,7 @@ function ServerActivationModal({ onClose, onSubmit, emailSent, isMobile }) {
             fontSize: isMobile ? "20px" : "28px",
           }}
         >
-          Oops! Our AI is Taking a Power Nap
+          Oops! Our NeuroVerify is Taking a Power Nap
         </h2>
         <p style={styles.serverModalText}>
           Our neural networks are currently in sleep mode to save energy. Don't

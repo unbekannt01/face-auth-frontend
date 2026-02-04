@@ -417,8 +417,8 @@ function Dashboard() {
           >
             <ActionButton
               label="Update Face"
-              onClick={() => alert("Coming Soon!")}
-              // onClick={() => setShowFaceConfirm(true)}
+              // onClick={() => alert("Coming Soon!")}
+              onClick={() => setShowFaceConfirm(true)}
               isMobile={isMobile}
             />
 

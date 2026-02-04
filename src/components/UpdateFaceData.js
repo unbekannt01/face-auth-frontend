@@ -61,20 +61,25 @@ function UpdateFaceData() {
       console.log("[Socket] Connected to server");
     }
 
-    socket.on("face-verification-complete", (data) => {
+    // FIXED: Listen for face-verification-complete event
+    socket.on("face-verification-complete", async (data) => {
       console.log("[UpdateFace] Verification complete:", data);
 
       if (data.sessionId === sessionId) {
         if (data.success) {
-          updateProgress(4);
-          setSuccess("Face updated successfully!");
+          updateProgress(4); // Update Complete
+          setSuccess("✅ Face updated successfully!");
           setStatus("Face data has been updated in your account");
           setIsLoading(false);
 
+          // Update localStorage with new faceUpdatedAt timestamp
           const user = JSON.parse(localStorage.getItem("user") || "{}");
           user.faceUpdatedAt = new Date().toISOString();
           localStorage.setItem("user", JSON.stringify(user));
 
+          console.log("✅ Face update successful, redirecting to dashboard...");
+
+          // Redirect to dashboard after 2 seconds
           setTimeout(() => {
             navigate("/dashboard");
           }, 2000);
@@ -93,7 +98,7 @@ function UpdateFaceData() {
         socket.off("face-verification-complete");
       }
     };
-  }, [navigate]);
+  }, [navigate, sessionId]); // Added sessionId to dependencies
 
   const updateProgress = (stepIndex) => {
     setProgressSteps((prev) =>
@@ -535,7 +540,6 @@ const styles = {
     color: "#b0b0c9",
     fontWeight: "500",
   },
-  // Progress Steps
   progressContainer: {
     display: "flex",
     justifyContent: "space-between",
