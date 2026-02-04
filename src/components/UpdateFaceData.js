@@ -34,6 +34,13 @@ function UpdateFaceData() {
   const [success, setSuccess] = useState("");
   const [status, setStatus] = useState("");
   const [showQR, setShowQR] = useState(false);
+  const [progressSteps, setProgressSteps] = useState([
+    { label: "QR Generated", completed: false },
+    { label: "Mobile Scanning", completed: false },
+    { label: "Face Captured", completed: false },
+    { label: "Verifying Face", completed: false },
+    { label: "Update Complete", completed: false },
+  ]);
 
   const isMobile = useMediaQuery("(max-width: 480px)");
   const isTablet = useMediaQuery("(max-width: 768px)");
@@ -47,21 +54,32 @@ function UpdateFaceData() {
 
     if (!socket) {
       socket = io(config.API_URL);
+      console.log("[Socket] Connected to server");
     }
 
+    // Listen for verification complete
     socket.on("face-verification-complete", (data) => {
       console.log("[UpdateFace] Verification complete:", data);
 
       if (data.sessionId === sessionId) {
         if (data.success) {
+          // Update progress
+          updateProgress(4); // Complete
           setSuccess("✅ Face updated successfully!");
+          setStatus("✅ Face data has been updated in your account");
           setIsLoading(false);
+
+          // Update user data in localStorage with new timestamp
+          const user = JSON.parse(localStorage.getItem("user") || "{}");
+          user.faceUpdatedAt = new Date().toISOString();
+          localStorage.setItem("user", JSON.stringify(user));
 
           setTimeout(() => {
             navigate("/dashboard");
           }, 2000);
         } else {
           setError("❌ " + (data.message || "Face update failed"));
+          setStatus("❌ Failed to update face data");
           setIsLoading(false);
         }
       }
@@ -75,7 +93,16 @@ function UpdateFaceData() {
         socket.off("face-verification-complete");
       }
     };
-  }, [navigate]);
+  }, [navigate, sessionId]);
+
+  const updateProgress = (stepIndex) => {
+    setProgressSteps((prev) =>
+      prev.map((step, idx) => ({
+        ...step,
+        completed: idx <= stepIndex,
+      })),
+    );
+  };
 
   const initiateUpdate = async () => {
     try {
@@ -104,6 +131,9 @@ function UpdateFaceData() {
       if (initiateResponse.data.success) {
         console.log("[UpdateFace] ✓ Session created:", newSessionId);
 
+        // Update progress
+        updateProgress(0); // QR Generated
+
         setShowQR(true);
         setStatus("📱 Scan QR code with your mobile device");
         setIsLoading(false);
@@ -113,6 +143,9 @@ function UpdateFaceData() {
           type: "update-face",
           email: user.email,
         });
+
+        // Start polling for face capture
+        startPolling(newSessionId);
       } else {
         throw new Error("Failed to initiate face update");
       }
@@ -127,12 +160,55 @@ function UpdateFaceData() {
     }
   };
 
+  // Poll for session status updates
+  const startPolling = (sid) => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await axios.get(
+          `${config.API_URL}/api/auth/session/${sid}`,
+        );
+
+        if (response.data.success) {
+          const sessionStatus = response.data.status;
+
+          // Update UI based on session status
+          if (sessionStatus === "scanned") {
+            updateProgress(1); // Mobile Scanning
+            setStatus("📱 Mobile device connected");
+          } else if (sessionStatus === "capturing") {
+            updateProgress(2); // Face Captured
+            setStatus("📸 Capturing face data...");
+          } else if (sessionStatus === "verifying") {
+            updateProgress(3); // Verifying
+            setStatus("🔍 Verifying face data...");
+          } else if (
+            sessionStatus === "verified" ||
+            sessionStatus === "completed"
+          ) {
+            updateProgress(4); // Complete
+            clearInterval(pollInterval);
+          }
+        }
+      } catch (err) {
+        // Session might be expired or deleted
+        console.log("[Polling] Session check failed:", err.message);
+      }
+    }, 2000); // Poll every 2 seconds
+
+    // Stop polling after 10 minutes
+    setTimeout(
+      () => {
+        clearInterval(pollInterval);
+      },
+      10 * 60 * 1000,
+    );
+  };
+
   const handleGoBack = () => {
     navigate("/dashboard");
   };
 
   const qrSize = isMobile ? 200 : isTablet ? 220 : 256;
-
   const qrData = `${config.APP_URL}/mobile-update-face/${sessionId}`;
 
   return (
@@ -141,7 +217,7 @@ function UpdateFaceData() {
         style={{
           ...styles.card,
           padding: isMobile ? "25px 20px" : isTablet ? "30px 25px" : "40px",
-          maxWidth: isMobile ? "100%" : isTablet ? "550px" : "600px",
+          maxWidth: isMobile ? "100%" : isTablet ? "550px" : "650px",
           margin: isMobile ? "0 16px" : "0",
         }}
       >
@@ -181,6 +257,53 @@ function UpdateFaceData() {
         >
           Update your biometric authentication with a new face scan
         </p>
+
+        {/* Progress Steps */}
+        {showQR && (
+          <div
+            style={{
+              ...styles.progressContainer,
+              marginBottom: isMobile ? "20px" : "25px",
+            }}
+          >
+            {progressSteps.map((step, idx) => (
+              <div key={idx} style={styles.progressStep}>
+                <div
+                  style={{
+                    ...styles.progressDot,
+                    background: step.completed
+                      ? "#00d4ff"
+                      : "rgba(0, 212, 255, 0.2)",
+                    boxShadow: step.completed
+                      ? "0 0 15px rgba(0, 212, 255, 0.6)"
+                      : "none",
+                  }}
+                >
+                  {step.completed && <span style={styles.checkmark}>✓</span>}
+                </div>
+                <span
+                  style={{
+                    ...styles.progressLabel,
+                    color: step.completed ? "#00d4ff" : "#6c757d",
+                    fontSize: isMobile ? "10px" : "12px",
+                  }}
+                >
+                  {step.label}
+                </span>
+                {idx < progressSteps.length - 1 && (
+                  <div
+                    style={{
+                      ...styles.progressLine,
+                      background: step.completed
+                        ? "#00d4ff"
+                        : "rgba(0, 212, 255, 0.2)",
+                    }}
+                  ></div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         {showQR && !isLoading && sessionId && (
           <div
@@ -411,6 +534,57 @@ const styles = {
     textAlign: "center",
     color: "#b0b0c9",
     fontWeight: "500",
+  },
+  // Progress Steps
+  progressContainer: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "20px",
+    background: "rgba(0, 212, 255, 0.05)",
+    borderRadius: "12px",
+    border: "1px solid rgba(0, 212, 255, 0.2)",
+    position: "relative",
+  },
+  progressStep: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "8px",
+    flex: 1,
+    position: "relative",
+  },
+  progressDot: {
+    width: "30px",
+    height: "30px",
+    borderRadius: "50%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    transition: "all 0.3s ease",
+    border: "2px solid rgba(0, 212, 255, 0.3)",
+  },
+  checkmark: {
+    color: "#000",
+    fontWeight: "bold",
+    fontSize: "14px",
+  },
+  progressLabel: {
+    fontSize: "11px",
+    textAlign: "center",
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
+    maxWidth: "80px",
+  },
+  progressLine: {
+    position: "absolute",
+    top: "15px",
+    left: "50%",
+    width: "100%",
+    height: "2px",
+    zIndex: -1,
+    transition: "all 0.3s ease",
   },
   qrContainer: {
     display: "flex",

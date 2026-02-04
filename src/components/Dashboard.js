@@ -46,7 +46,17 @@ function Dashboard() {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((response) => {
-        setUserData(response.data.user);
+        const user = response.data.user;
+
+        // Merge with any additional data from localStorage (like faceUpdatedAt)
+        const localUser = JSON.parse(localStorage.getItem("user") || "{}");
+        const mergedUser = { ...user, ...localUser };
+
+        setUserData(mergedUser);
+
+        // Update localStorage with merged data
+        localStorage.setItem("user", JSON.stringify(mergedUser));
+
         setLoading(false);
       })
       .catch((error) => {
@@ -85,7 +95,7 @@ function Dashboard() {
   };
 
   const formatDateTime = (dateString) => {
-    if (!dateString) return "First time login";
+    if (!dateString) return "Never updated";
     try {
       return new Date(dateString).toLocaleString("en-US", {
         year: "numeric",
@@ -96,6 +106,28 @@ function Dashboard() {
       });
     } catch {
       return "Invalid Date";
+    }
+  };
+
+  const getRelativeTime = (dateString) => {
+    if (!dateString) return "Never";
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMins / 60);
+      const diffDays = Math.floor(diffHours / 24);
+
+      if (diffMins < 1) return "Just now";
+      if (diffMins < 60)
+        return `${diffMins} minute${diffMins > 1 ? "s" : ""} ago`;
+      if (diffHours < 24)
+        return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+      if (diffDays < 30) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+      return formatDate(dateString);
+    } catch {
+      return "Unknown";
     }
   };
 
@@ -264,7 +296,7 @@ function Dashboard() {
           </div>
         </div>
 
-        {/* Security Status */}
+        {/* Face Authentication Status */}
         <div
           style={{
             backgroundColor: "#e8f5e9",
@@ -282,7 +314,7 @@ function Dashboard() {
             }}
           >
             <span style={{ fontSize: isMobile ? "24px" : "32px" }}>🔐</span>
-            <div>
+            <div style={{ flex: 1 }}>
               <h4
                 style={{
                   margin: "0 0 4px 0",
@@ -301,6 +333,18 @@ function Dashboard() {
               >
                 Your account is secured with AI-powered facial recognition
               </p>
+              {userData?.faceUpdatedAt && (
+                <p
+                  style={{
+                    margin: "8px 0 0 0",
+                    color: "#66bb6a",
+                    fontSize: isMobile ? "11px" : "12px",
+                    fontWeight: "600",
+                  }}
+                >
+                  🕐 Last updated: {getRelativeTime(userData.faceUpdatedAt)}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -355,7 +399,6 @@ function Dashboard() {
           >
             <ActionButton
               label="Update Face"
-              // onClick={() => alert("Coming Soon!")}
               onClick={() => navigate("/update-face")}
               isMobile={isMobile}
             />
