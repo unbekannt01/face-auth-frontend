@@ -85,13 +85,14 @@ function Login() {
     setLoading(true);
 
     try {
-      console.log("Attempting login to:", `${config.API_URL}/api/auth/login`);
-
-      const response = await axios.post(`${config.API_URL}/api/auth/login`, {
-        email,
-        password,
-        sessionId,
-      });
+      const response = await axios.post(
+        `${config.API_URL}/api/auth/login/initiate`,
+        {
+          email,
+          password,
+          sessionId,
+        },
+      );
 
       if (response.data.success) {
         setShowQR(true);
@@ -102,21 +103,9 @@ function Login() {
       }
     } catch (error) {
       console.error("Login error:", error);
-
-      // More specific error messages
-      if (error.code === "ERR_NETWORK") {
-        setStatus(
-          "✗ Cannot connect to server. Please check if backend is running.",
-        );
-      } else if (error.response?.status === 404) {
-        setStatus("✗ Login endpoint not found. Check your backend routes.");
-      } else {
-        setStatus(
-          "✗ Login failed: " +
-            (error.response?.data?.message || "Server error"),
-        );
-      }
-
+      setStatus(
+        "✗ Login failed: " + (error.response?.data?.message || "Server error"),
+      );
       setLoading(false);
     }
   };
