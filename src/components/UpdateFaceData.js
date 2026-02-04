@@ -62,32 +62,6 @@ function UpdateFaceData() {
       console.log("[Socket] Connected to server");
     }
 
-    // FIXED: Listen for face-verification-complete event
-    socket.on("face-verification-complete", async (data) => {
-      console.log("[UpdateFace] Verification complete:", data);
-
-      if (data.sessionId === sessionRef.current) {
-        if (data.success) {
-          updateProgress(4);
-          setSuccess("Face updated successfully!");
-          setStatus("Face data has been updated in your account");
-          setIsLoading(false);
-
-          const user = JSON.parse(localStorage.getItem("user") || "{}");
-          user.faceUpdatedAt = new Date().toISOString();
-          localStorage.setItem("user", JSON.stringify(user));
-
-          setTimeout(() => {
-            navigate("/dashboard");
-          }, 2000);
-        } else {
-          setError("❌ " + (data.message || "Face update failed"));
-          setStatus("❌ Failed to update face data");
-          setIsLoading(false);
-        }
-      }
-    });
-
     initiateUpdate();
 
     return () => {
@@ -96,6 +70,39 @@ function UpdateFaceData() {
       }
     };
   }, [navigate, sessionId]); // Added sessionId to dependencies
+
+  useEffect(() => {
+    if (!sessionId || !socket) return;
+
+    console.log("🎧 Listening for verification on:", sessionId);
+
+    const handler = (data) => {
+      console.log("📩 Socket Event Received:", data);
+
+      if (data.sessionId === sessionRef.current) {
+        console.log("✅ Session matched, updating UI");
+
+        updateProgress(4);
+        setSuccess("✅ Face updated successfully!");
+        setStatus("Face data has been updated in your account");
+        setIsLoading(false);
+
+        const user = JSON.parse(localStorage.getItem("user") || "{}");
+        user.faceUpdatedAt = new Date().toISOString();
+        localStorage.setItem("user", JSON.stringify(user));
+
+        setTimeout(() => {
+          navigate("/dashboard");
+        }, 2000);
+      }
+    };
+
+    socket.on("face-verification-complete", handler);
+
+    return () => {
+      socket.off("face-verification-complete", handler);
+    };
+  }, [sessionId]);
 
   const updateProgress = (stepIndex) => {
     setProgressSteps((prev) =>
