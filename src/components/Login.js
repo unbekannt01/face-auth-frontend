@@ -78,35 +78,86 @@ function Login() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      setStatus("✗ Please enter email and password");
+      setStatus("✗ Please fill all fields");
+      setTimeout(() => setStatus(""), 3000);
       return;
     }
 
-    setLoading(true);
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setStatus("✗ Invalid email format");
+      setTimeout(() => setStatus(""), 3000);
+      return;
+    }
+
+    if (password.length < 6) {
+      setStatus("✗ Password must be at least 6 characters");
+      setTimeout(() => setStatus(""), 3000);
+      return;
+    }
 
     try {
-      const response = await axios.post(
+      setLoading(true);
+
+      console.log("[Login] Validating credentials...");
+
+      const validateResponse = await axios.post(
         `${config.API_URL}/api/auth/login/initiate`,
         {
-          email,
+          email: email.toLowerCase(),
           password,
-          sessionId,
         },
       );
 
-      if (response.data.success) {
-        setShowQR(true);
-        setStatus("");
-      } else {
-        setStatus("✗ " + response.data.message);
-        setLoading(false);
+      if (validateResponse.data.success) {
+        console.log(
+          "[Login] ✓ Credentials valid! Session ID:",
+          validateResponse.data.sessionId,
+        );
+
+        // Now create session with validated credentials
+        const sessionResponse = await axios.post(
+          `${config.API_URL}/api/session/create`,
+          {
+            sessionId,
+            email: email.toLowerCase(),
+            password,
+            type: "login",
+          },
+        );
+
+        if (sessionResponse.data.success) {
+          setShowQR(true);
+          setStatus("✓ Credentials verified! Scan QR code with mobile");
+          setLoading(false);
+
+          socket.emit("qr-generated", {
+            sessionId,
+            type: "login",
+            email: email.toLowerCase(),
+          });
+        }
       }
     } catch (error) {
-      console.error("Login error:", error);
-      setStatus(
-        "✗ Login failed: " + (error.response?.data?.message || "Server error"),
-      );
       setLoading(false);
+      console.error("[Login] ✗ Error:", error);
+
+      // Check for specific error messages
+      let errorMsg = "Failed to login. Please try again.";
+
+      if (error.response?.status === 401) {
+        errorMsg = "Invalid email or password";
+      } else if (error.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
+
+      setStatus("✗ " + errorMsg);
+
+      setTimeout(() => {
+        setStatus("");
+      }, 4000);
     }
   };
 
