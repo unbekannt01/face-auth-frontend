@@ -45,6 +45,12 @@ function Login() {
       localStorage.removeItem("token");
       sessionStorage.clear();
     }
+    if (!showQR) {
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      sessionStorage.clear();
+    }
 
     socket.on("face-verification-complete", async (data) => {
       if (data.sessionId === sessionId) {
@@ -76,6 +82,7 @@ function Login() {
     });
 
     return () => socket.off("face-verification-complete");
+  }, [sessionId, navigate, showQR]);
   }, [sessionId, navigate, showQR]);
 
   const handleLogin = async () => {
