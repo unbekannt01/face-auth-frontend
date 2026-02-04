@@ -460,7 +460,7 @@ function Dashboard() {
             <h3 style={modalTitle}>🔐 Update Face Authentication</h3>
 
             <p style={modalText}>
-              Aapne apna face data last time is date & time par update kiya tha:
+              You last updated your face data on the following date & time:
             </p>
 
             <p style={modalDate}>
@@ -468,14 +468,14 @@ function Dashboard() {
             </p>
 
             <ul style={modalList}>
-              <li>Proper lighting hona chahiye</li>
-              <li>Face clearly visible hona chahiye</li>
-              <li>Camera stable rakhiye</li>
+              <li>Ensure proper lighting</li>
+              <li>Make sure your face is clearly visible</li>
+              <li>Keep the camera stable</li>
             </ul>
 
             <p style={modalWarning}>
-              ⚠️ Is process ke baad purana face data permanently replace ho
-              jayega.
+              ⚠️ After this process, your previous face data will be permanently
+              replaced.
             </p>
 
             <div style={modalActions}>

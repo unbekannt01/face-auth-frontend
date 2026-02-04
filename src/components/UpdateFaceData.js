@@ -42,6 +42,7 @@ function UpdateFaceData() {
     { label: "Verifying Face", completed: false },
     { label: "Update Complete", completed: false },
   ]);
+  const sessionRef = useRef(null);
 
   const isMobile = useMediaQuery("(max-width: 480px)");
   const isTablet = useMediaQuery("(max-width: 768px)");
@@ -65,21 +66,17 @@ function UpdateFaceData() {
     socket.on("face-verification-complete", async (data) => {
       console.log("[UpdateFace] Verification complete:", data);
 
-      if (data.sessionId === sessionId) {
+      if (data.sessionId === sessionRef.current) {
         if (data.success) {
-          updateProgress(4); // Update Complete
-          setSuccess("✅ Face updated successfully!");
+          updateProgress(4);
+          setSuccess("Face updated successfully!");
           setStatus("Face data has been updated in your account");
           setIsLoading(false);
 
-          // Update localStorage with new faceUpdatedAt timestamp
           const user = JSON.parse(localStorage.getItem("user") || "{}");
           user.faceUpdatedAt = new Date().toISOString();
           localStorage.setItem("user", JSON.stringify(user));
 
-          console.log("✅ Face update successful, redirecting to dashboard...");
-
-          // Redirect to dashboard after 2 seconds
           setTimeout(() => {
             navigate("/dashboard");
           }, 2000);
@@ -132,6 +129,7 @@ function UpdateFaceData() {
 
       const newSessionId = initiateResponse.data.sessionId;
       setSessionId(newSessionId);
+      sessionRef.current = newSessionId;
 
       if (initiateResponse.data.success) {
         console.log("[UpdateFace] ✓ Session created:", newSessionId);
@@ -190,7 +188,10 @@ function UpdateFaceData() {
             sessionStatus === "verified" ||
             sessionStatus === "completed"
           ) {
-            updateProgress(4); // Complete
+            updateProgress(4);
+            setSuccess("Face updated successfully!");
+            setStatus("Face data has been updated in your account");
+            setIsLoading(false);
             clearInterval(pollInterval);
           }
         }
