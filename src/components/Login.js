@@ -168,7 +168,6 @@ function Login() {
   };
   
   const qrData = `${config.APP_URL}/mobile-verify/${sessionId}`;
-
   // Responsive QR size
   const qrSize = isMobile ? 180 : isTablet ? 200 : 220;
 
