@@ -4,6 +4,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { QRCodeSVG } from "qrcode.react";
 import axios from "axios";
 import { config } from "../config";
 import io from "socket.io-client";
@@ -46,26 +47,27 @@ function UpdateFaceData() {
 
     if (!socket) {
       socket = io(config.API_URL);
-
-      socket.on("face-verification-complete", (data) => {
-        console.log("[UpdateFace] Verification complete:", data);
-
-        if (data.sessionId === sessionId) {
-          if (data.success) {
-            setSuccess("✅ Face updated successfully!");
-            setIsLoading(false);
-
-            setTimeout(() => {
-              navigate("/dashboard");
-            }, 2000);
-          } else {
-            setError("❌ " + (data.message || "Face update failed"));
-            setIsLoading(false);
-          }
-        }
-      });
     }
 
+    socket.on("face-verification-complete", (data) => {
+      console.log("[UpdateFace] Verification complete:", data);
+
+      if (data.sessionId === sessionId) {
+        if (data.success) {
+          setSuccess("✅ Face updated successfully!");
+          setIsLoading(false);
+
+          setTimeout(() => {
+            navigate("/dashboard");
+          }, 2000);
+        } else {
+          setError("❌ " + (data.message || "Face update failed"));
+          setIsLoading(false);
+        }
+      }
+    });
+
+    // Initiate update on mount
     initiateUpdate();
 
     return () => {
@@ -73,7 +75,7 @@ function UpdateFaceData() {
         socket.off("face-verification-complete");
       }
     };
-  }, [navigate, sessionId]);
+  }, [navigate]);
 
   const initiateUpdate = async () => {
     try {
@@ -86,8 +88,6 @@ function UpdateFaceData() {
 
       console.log("[UpdateFace] Starting for user:", user.email);
 
-      console.log("[UpdateFace] ✓ Session created:", sessionId);
-
       const initiateResponse = await axios.post(
         `${config.API_URL}/api/auth/update-face/initiate`,
         {},
@@ -98,17 +98,18 @@ function UpdateFaceData() {
         },
       );
 
-      setSessionId(initiateResponse.data.sessionId);
+      const newSessionId = initiateResponse.data.sessionId;
+      setSessionId(newSessionId);
 
       if (initiateResponse.data.success) {
-        console.log("[UpdateFace] ✓ QR Auth session created");
+        console.log("[UpdateFace] ✓ Session created:", newSessionId);
 
         setShowQR(true);
         setStatus("📱 Scan QR code with your mobile device");
         setIsLoading(false);
 
         socket.emit("qr-generated", {
-          sessionId,
+          sessionId: newSessionId,
           type: "update-face",
           email: user.email,
         });
@@ -132,11 +133,7 @@ function UpdateFaceData() {
 
   const qrSize = isMobile ? 200 : isTablet ? 220 : 256;
 
-  const qrData = JSON.stringify({
-    sessionId,
-    type: "update-face",
-    url: `${config.APP_URL}/mobile-update-face/${sessionId}`,
-  });
+  const qrData = `${config.APP_URL}/mobile-update-face/${sessionId}`;
 
   return (
     <div style={styles.container}>
@@ -185,17 +182,44 @@ function UpdateFaceData() {
           Update your biometric authentication with a new face scan
         </p>
 
-        {showQR && !isLoading && (
+        {showQR && !isLoading && sessionId && (
           <div
             style={{
               ...styles.qrContainer,
               marginBottom: isMobile ? "20px" : "25px",
             }}
           >
+            <p
+              style={{
+                ...styles.qrHint,
+                fontSize: isMobile ? "13px" : "14px",
+                marginBottom: isMobile ? "12px" : "15px",
+              }}
+            >
+              📱 Scan with your mobile camera
+            </p>
+
+            <div
+              style={{
+                ...styles.qrBox,
+                padding: isMobile ? "12px" : "15px",
+              }}
+            >
+              <QRCodeSVG
+                value={qrData}
+                size={qrSize}
+                level="H"
+                includeMargin={true}
+                bgColor="#ffffff"
+                fgColor="#000000"
+              />
+            </div>
+
             <div
               style={{
                 ...styles.manualLinkBox,
                 padding: isMobile ? "12px" : "15px",
+                marginTop: isMobile ? "12px" : "15px",
               }}
             >
               <p
@@ -208,7 +232,7 @@ function UpdateFaceData() {
               </p>
 
               <a
-                href={`${config.APP_URL}/mobile-update-face/${sessionId}`}
+                href={qrData}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
@@ -315,7 +339,7 @@ function UpdateFaceData() {
             <li>Scan the QR code with your mobile device</li>
             <li>Position your face in good lighting</li>
             <li>Ensure blue dots appear on your face</li>
-            <li>Tap &quot;Capture Face&quot; when prompted</li>
+            <li>Tap "Capture Face" when prompted</li>
             <li>Wait for verification to complete</li>
           </ol>
         </div>
@@ -335,7 +359,7 @@ function UpdateFaceData() {
             }}
           >
             <strong>Important:</strong> This will replace your current biometric
-            data. Ensure you&apos;re in good lighting and your face is clearly
+            data. Ensure you're in good lighting and your face is clearly
             visible.
           </p>
         </div>
@@ -398,19 +422,20 @@ const styles = {
     borderRadius: "12px",
     border: "2px solid rgba(0, 212, 255, 0.3)",
     boxShadow: "0 10px 30px rgba(0, 212, 255, 0.2)",
-    marginBottom: "15px",
+    display: "inline-block",
   },
   qrHint: {
     color: "#b0b0c9",
-    margin: "0 0 10px 0",
+    margin: "0",
     fontWeight: "600",
+    textAlign: "center",
   },
   manualLinkBox: {
     background: "rgba(0, 212, 255, 0.08)",
     borderRadius: "8px",
     border: "1px solid rgba(0, 212, 255, 0.2)",
-    marginTop: "15px",
     textAlign: "center",
+    width: "100%",
   },
   manualLinkLabel: {
     color: "#b0b0c9",
