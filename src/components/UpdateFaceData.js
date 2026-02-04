@@ -2,11 +2,9 @@
 
 /* eslint-disable no-unused-vars */
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { QRCodeSVG } from "qrcode.react";
-import { v4 as uuidv4 } from "uuid";
 import { config } from "../config";
 import io from "socket.io-client";
 
@@ -29,7 +27,7 @@ function useMediaQuery(query) {
 
 function UpdateFaceData() {
   const navigate = useNavigate();
-  const [sessionId] = useState(uuidv4());
+  const [sessionId, setSessionId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -88,20 +86,6 @@ function UpdateFaceData() {
 
       console.log("[UpdateFace] Starting for user:", user.email);
 
-      const sessionResponse = await axios.post(
-        `${config.API_URL}/api/session/create`,
-        {
-          sessionId,
-          email: user.email,
-          password: "",
-          type: "update-face",
-        },
-      );
-
-      if (!sessionResponse.data.success) {
-        throw new Error("Failed to create session");
-      }
-
       console.log("[UpdateFace] ✓ Session created:", sessionId);
 
       const initiateResponse = await axios.post(
@@ -113,6 +97,8 @@ function UpdateFaceData() {
           },
         },
       );
+
+      setSessionId(initiateResponse.data.sessionId);
 
       if (initiateResponse.data.success) {
         console.log("[UpdateFace] ✓ QR Auth session created");
