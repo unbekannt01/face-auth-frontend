@@ -83,7 +83,6 @@ function Login() {
 
     return () => socket.off("face-verification-complete");
   }, [sessionId, navigate, showQR]);
-  }, [sessionId, navigate, showQR]);
 
   const handleLogin = async () => {
     if (!email || !password) {
