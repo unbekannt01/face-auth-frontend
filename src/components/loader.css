@@ -1,7 +1,7 @@
 .loader-overlay {
   position: fixed;
   inset: 0;
-  background: linear-gradient(135deg, rgba(10, 14, 39, 0.95), rgba(26, 26, 62, 0.95));
+  background: linear-gradient(135deg, rgba(5, 8, 22, 0.95), rgba(10, 15, 35, 0.95));
   backdrop-filter: blur(8px);
   display: flex;
   flex-direction: column;
@@ -21,17 +21,17 @@
   align-items: center;
 }
 
-/* Outer Cyber Ring - Premium Purple */
+/* Outer Cyber Ring - Blue Theme */
 .cyber-ring {
   position: absolute;
   inset: 0;
   border-radius: 50%;
   border: 3px solid transparent;
-  border-top: 3px solid #8b5cf6;
-  border-right: 3px solid #6366f1;
-  border-bottom: 3px solid rgba(139, 92, 246, 0.4);
+  border-top: 3px solid #00d4ff;
+  border-right: 3px solid #00b8e6;
+  border-bottom: 3px solid rgba(0, 212, 255, 0.4);
   animation: rotateSmooth 2s linear infinite;
-  filter: drop-shadow(0 0 20px rgba(139, 92, 246, 0.6));
+  filter: drop-shadow(0 0 20px rgba(0, 212, 255, 0.6));
 }
 
 /* Middle Ring - Dashed */
@@ -40,18 +40,18 @@
   width: 140px;
   height: 140px;
   border-radius: 50%;
-  border: 2px dashed rgba(99, 102, 241, 0.5);
+  border: 2px dashed rgba(0, 212, 255, 0.5);
   animation: rotateReverse 3.5s linear infinite;
-  filter: drop-shadow(0 0 10px rgba(139, 92, 246, 0.3));
+  filter: drop-shadow(0 0 10px rgba(0, 212, 255, 0.3));
 }
 
-/* Core Face Node - Premium Gradient */
+/* Core Face Node - Blue Gradient */
 .face-core {
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #8b5cf6, #6366f1);
-  box-shadow: 0 0 40px rgba(139, 92, 246, 0.8), 0 0 60px rgba(99, 102, 241, 0.4), inset 0 0 20px rgba(255, 255, 255, 0.1);
+  background: linear-gradient(135deg, #00d4ff, #0099cc);
+  box-shadow: 0 0 40px rgba(0, 212, 255, 0.8), 0 0 60px rgba(0, 180, 230, 0.4), inset 0 0 20px rgba(255, 255, 255, 0.1);
   position: relative;
   animation: corePulse 2s ease-in-out infinite;
 }
@@ -65,17 +65,17 @@
   animation: innerPulse 1.5s ease-in-out infinite;
 }
 
-/* Scanning Line - Premium */
+/* Scanning Line - Blue */
 .scan-bar {
   position: absolute;
   width: 140px;
   height: 2px;
-  background: linear-gradient(90deg, transparent, #8b5cf6, #6366f1, transparent);
+  background: linear-gradient(90deg, transparent, #00d4ff, #00b8e6, transparent);
   top: 50%;
   left: 50%;
   transform: translateX(-50%) translateY(-50%);
   animation: scanLine 1.2s ease-in-out infinite;
-  filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.8));
+  filter: drop-shadow(0 0 8px rgba(0, 212, 255, 0.8));
 }
 
 /* Text */
@@ -83,10 +83,11 @@
   margin-top: 35px;
   font-size: 18px;
   letter-spacing: 2px;
-  color: #a78bfa;
+  color: #00d4ff;
   text-transform: uppercase;
   font-weight: 700;
   animation: textFade 1.5s ease-in-out infinite;
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
 }
 
 .scan-sub {
@@ -127,11 +128,11 @@
 @keyframes corePulse {
   0%, 100% { 
     transform: scale(1);
-    box-shadow: 0 0 40px rgba(139, 92, 246, 0.8), 0 0 60px rgba(99, 102, 241, 0.4), inset 0 0 20px rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 40px rgba(0, 212, 255, 0.8), 0 0 60px rgba(0, 180, 230, 0.4), inset 0 0 20px rgba(255, 255, 255, 0.1);
   }
   50% { 
     transform: scale(1.08);
-    box-shadow: 0 0 60px rgba(139, 92, 246, 1), 0 0 90px rgba(99, 102, 241, 0.6), inset 0 0 30px rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 60px rgba(0, 212, 255, 1), 0 0 90px rgba(0, 180, 230, 0.6), inset 0 0 30px rgba(255, 255, 255, 0.2);
   }
 }
 
@@ -152,5 +153,66 @@
   }
   50% { 
     opacity: 1;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+  .scanner-box {
+    width: 160px;
+    height: 160px;
+  }
+
+  .inner-ring {
+    width: 110px;
+    height: 110px;
+  }
+
+  .face-core {
+    width: 65px;
+    height: 65px;
+  }
+
+  .scan-bar {
+    width: 110px;
+  }
+
+  .scan-text {
+    font-size: 16px;
+    letter-spacing: 1.5px;
+  }
+
+  .scan-sub {
+    font-size: 11px;
+    letter-spacing: 1.5px;
+  }
+}
+
+@media (max-width: 768px) {
+  .scanner-box {
+    width: 180px;
+    height: 180px;
+  }
+
+  .inner-ring {
+    width: 125px;
+    height: 125px;
+  }
+
+  .face-core {
+    width: 70px;
+    height: 70px;
+  }
+
+  .scan-bar {
+    width: 125px;
+  }
+
+  .scan-text {
+    font-size: 17px;
+  }
+
+  .scan-sub {
+    font-size: 11px;
   }
 }

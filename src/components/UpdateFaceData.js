@@ -1,51 +1,69 @@
 /* eslint-disable no-unused-vars */
-'use client';
+"use client";
 
 /* eslint-disable react-hooks/exhaustive-deps */
-// src/components/UpdateFaceData.js
-import React, { useEffect, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { QRCodeSVG } from 'qrcode.react'; // Import QRCodeSVG
-import { v4 as uuidv4 } from 'uuid';
-import { config } from '../config';
-import io from 'socket.io-client';
+import React, { useEffect, useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { QRCodeSVG } from "qrcode.react";
+import { v4 as uuidv4 } from "uuid";
+import { config } from "../config";
+import io from "socket.io-client";
 
 let socket = null;
+
+// Custom hook for responsive breakpoints
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(
+    typeof window !== "undefined" ? window.matchMedia(query).matches : false,
+  );
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    const handler = (e) => setMatches(e.matches);
+    media.addEventListener("change", handler);
+    setMatches(media.matches);
+    return () => media.removeEventListener("change", handler);
+  }, [query]);
+  return matches;
+}
 
 function UpdateFaceData() {
   const navigate = useNavigate();
   const [sessionId, setSessionId] = useState(uuidv4());
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [status, setStatus] = useState('Generating QR code...');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [status, setStatus] = useState("Generating QR code...");
   const [showQR, setShowQR] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const qrRef = useRef(null);
 
+  // Responsive breakpoints
+  const isMobile = useMediaQuery("(max-width: 480px)");
+  const isTablet = useMediaQuery("(max-width: 768px)");
+
   useEffect(() => {
     // Check if user is logged in
-    const token = localStorage.getItem('authToken');
+    const token = localStorage.getItem("authToken");
     if (!token) {
-      navigate('/login');
+      navigate("/login");
       return;
     }
 
     // Initialize socket
     if (!socket) {
       socket = io(config.API_URL);
-      
-      socket.on('face-verification-complete', (data) => {
-        console.log('[UpdateFace] Verification complete:', data);
+
+      socket.on("face-verification-complete", (data) => {
+        console.log("[UpdateFace] Verification complete:", data);
         if (data.success) {
-          setSuccess('✅ Face updated successfully!');
+          setSuccess("✅ Face updated successfully!");
           setVerifying(false);
           setTimeout(() => {
-            navigate('/dashboard');
+            navigate("/dashboard");
           }, 2000);
         } else {
-          setError('❌ ' + (data.message || 'Face update failed'));
+          setError("❌ " + (data.message || "Face update failed"));
           setVerifying(false);
         }
       });
@@ -62,97 +80,161 @@ function UpdateFaceData() {
   const initiateUpdate = async () => {
     try {
       setIsLoading(true);
-      setError('');
-      setStatus('Generating QR code...');
+      setError("");
+      setStatus("Generating QR code...");
 
-      const token = localStorage.getItem('authToken');
-      
+      const token = localStorage.getItem("authToken");
+
       // Call backend to initiate face update
       const response = await axios.post(
         `${config.API_URL}/api/auth/update-face/initiate`,
         {},
         {
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
+            Authorization: `Bearer ${token}`,
+          },
+        },
       );
 
       if (response.data.success) {
-        console.log('[UpdateFace] Session created:', sessionId);
-        
+        console.log("[UpdateFace] Session created:", sessionId);
+
         // Create session on server to store user data for mobile
         try {
-          await axios.post(
-            `${config.API_URL}/api/session/create`,
-            {
-              sessionId,
-              email: 'update-face', // Placeholder for update-face flow
-              password: '', // Not needed for update-face
-              type: 'update-face'
-            }
-          );
-          console.log('[UpdateFace] Session stored on server');
+          await axios.post(`${config.API_URL}/api/session/create`, {
+            sessionId,
+            email: "update-face",
+            password: "",
+            type: "update-face",
+          });
+          console.log("[UpdateFace] Session stored on server");
         } catch (sessionErr) {
-          console.error('[UpdateFace] Session store error:', sessionErr);
-          // Continue anyway - session might still work
+          console.error("[UpdateFace] Session store error:", sessionErr);
         }
-        
+
         setShowQR(true);
-        setStatus('📱 Scan QR code with your mobile device');
+        setStatus("📱 Scan QR code with your mobile device");
         setIsLoading(false);
       } else {
-        setError('❌ Failed to initiate face update');
+        setError("❌ Failed to initiate face update");
         setIsLoading(false);
       }
     } catch (err) {
-      console.error('[UpdateFace] Error:', err);
-      const errorMsg = err.response?.data?.message || 'Failed to initiate face update';
-      setError('❌ ' + errorMsg);
+      console.error("[UpdateFace] Error:", err);
+      const errorMsg =
+        err.response?.data?.message || "Failed to initiate face update";
+      setError("❌ " + errorMsg);
       setIsLoading(false);
     }
   };
 
   const handleGoBack = () => {
-    navigate('/dashboard');
+    navigate("/dashboard");
   };
+
+  const qrSize = isMobile ? 200 : isTablet ? 220 : 256;
 
   return (
     <div style={styles.container}>
-      <div style={styles.card}>
+      <div
+        style={{
+          ...styles.card,
+          padding: isMobile ? "25px 20px" : isTablet ? "30px 25px" : "40px",
+          maxWidth: isMobile ? "100%" : isTablet ? "550px" : "600px",
+          margin: isMobile ? "0 16px" : "0",
+        }}
+      >
         {/* Header */}
-        <div style={styles.header}>
-          <button onClick={handleGoBack} style={styles.backBtn}>
+        <div
+          style={{
+            ...styles.header,
+            marginBottom: isMobile ? "12px" : "15px",
+          }}
+        >
+          <button
+            onClick={handleGoBack}
+            style={{
+              ...styles.backBtn,
+              padding: isMobile ? "8px 16px" : "10px 20px",
+              fontSize: isMobile ? "13px" : "14px",
+            }}
+          >
             ← Back
           </button>
-          <h1 style={styles.title}>Update Face Data</h1>
-          <div style={{ width: '80px' }}></div>
+          <h1
+            style={{
+              ...styles.title,
+              fontSize: isMobile ? "22px" : isTablet ? "25px" : "28px",
+            }}
+          >
+            Update Face Data
+          </h1>
+          <div style={{ width: isMobile ? "60px" : "80px" }}></div>
         </div>
 
-        <p style={styles.subtitle}>
+        <p
+          style={{
+            ...styles.subtitle,
+            fontSize: isMobile ? "12px" : "14px",
+            marginBottom: isMobile ? "20px" : "25px",
+          }}
+        >
           Update your biometric authentication with a new face scan
         </p>
 
         {/* QR Code Section */}
         {showQR && !isLoading && (
-          <div style={styles.qrContainer}>
-            <div style={styles.qrBox}>
-              <QRCodeSVG 
+          <div
+            style={{
+              ...styles.qrContainer,
+              marginBottom: isMobile ? "20px" : "25px",
+            }}
+          >
+            <div
+              style={{
+                ...styles.qrBox,
+                padding: isMobile ? "12px" : "15px",
+              }}
+            >
+              <QRCodeSVG
                 value={`${config.APP_URL}/mobile-update-face/${sessionId}`}
-                size={256}
+                size={qrSize}
                 level="H"
                 includeMargin={true}
               />
             </div>
-            <p style={styles.qrHint}>Scan with your mobile device</p>
-            
-            <div style={styles.manualLinkBox}>
-              <p style={styles.manualLinkLabel}>Or click to open directly:</p>
-              <a 
+            <p
+              style={{
+                ...styles.qrHint,
+                fontSize: isMobile ? "13px" : "14px",
+              }}
+            >
+              Scan with your mobile device
+            </p>
+
+            <div
+              style={{
+                ...styles.manualLinkBox,
+                padding: isMobile ? "12px" : "15px",
+              }}
+            >
+              <p
+                style={{
+                  ...styles.manualLinkLabel,
+                  fontSize: isMobile ? "12px" : "13px",
+                }}
+              >
+                Or click to open directly:
+              </p>
+              <a
                 href={`${config.APP_URL}/mobile-update-face/${sessionId}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={styles.manualLink}
+                style={{
+                  ...styles.manualLink,
+                  padding: isMobile ? "8px 20px" : "10px 25px",
+                  fontSize: isMobile ? "13px" : "14px",
+                }}
               >
                 Open on Mobile
               </a>
@@ -162,47 +244,149 @@ function UpdateFaceData() {
 
         {/* Loading State */}
         {isLoading && (
-          <div style={styles.loadingContainer}>
-            <div style={styles.spinner}></div>
-            <p style={styles.loadingText}>Generating QR code...</p>
+          <div
+            style={{
+              ...styles.loadingContainer,
+              padding: isMobile ? "30px 15px" : "40px 20px",
+            }}
+          >
+            <div
+              style={{
+                ...styles.spinner,
+                width: isMobile ? "40px" : "50px",
+                height: isMobile ? "40px" : "50px",
+              }}
+            ></div>
+            <p
+              style={{
+                ...styles.loadingText,
+                fontSize: isMobile ? "14px" : "16px",
+              }}
+            >
+              Generating QR code...
+            </p>
           </div>
         )}
 
         {/* Verification State */}
         {verifying && (
-          <div style={styles.verifyingContainer}>
-            <div style={styles.spinner}></div>
-            <p style={styles.verifyingText}>Verifying face...</p>
+          <div
+            style={{
+              ...styles.verifyingContainer,
+              padding: isMobile ? "30px 15px" : "40px 20px",
+              marginBottom: isMobile ? "15px" : "20px",
+            }}
+          >
+            <div
+              style={{
+                ...styles.spinner,
+                width: isMobile ? "40px" : "50px",
+                height: isMobile ? "40px" : "50px",
+              }}
+            ></div>
+            <p
+              style={{
+                ...styles.verifyingText,
+                fontSize: isMobile ? "14px" : "16px",
+              }}
+            >
+              Verifying face...
+            </p>
           </div>
         )}
 
         {/* Status Messages */}
-        <div style={styles.statusContainer}>
-          {error && <p style={styles.error}>{error}</p>}
-          {success && <p style={styles.success}>{success}</p>}
+        <div
+          style={{
+            ...styles.statusContainer,
+            marginBottom: isMobile ? "15px" : "20px",
+          }}
+        >
+          {error && (
+            <p
+              style={{
+                ...styles.error,
+                padding: isMobile ? "10px" : "12px",
+                fontSize: isMobile ? "13px" : "14px",
+              }}
+            >
+              {error}
+            </p>
+          )}
+          {success && (
+            <p
+              style={{
+                ...styles.success,
+                padding: isMobile ? "10px" : "12px",
+                fontSize: isMobile ? "13px" : "14px",
+              }}
+            >
+              {success}
+            </p>
+          )}
           {!error && !success && showQR && (
-            <p style={styles.statusText}>{status}</p>
+            <p
+              style={{
+                ...styles.statusText,
+                padding: isMobile ? "10px" : "12px",
+                fontSize: isMobile ? "13px" : "15px",
+              }}
+            >
+              {status}
+            </p>
           )}
         </div>
 
         {/* Instructions */}
-        <div style={styles.instructions}>
-          <h3 style={styles.instructionTitle}>Steps:</h3>
-          <ol style={styles.instructionList}>
+        <div
+          style={{
+            ...styles.instructions,
+            padding: isMobile ? "15px" : "20px",
+            marginBottom: isMobile ? "12px" : "15px",
+          }}
+        >
+          <h3
+            style={{
+              ...styles.instructionTitle,
+              fontSize: isMobile ? "14px" : "16px",
+              marginBottom: isMobile ? "12px" : "15px",
+            }}
+          >
+            Steps:
+          </h3>
+          <ol
+            style={{
+              ...styles.instructionList,
+              fontSize: isMobile ? "12px" : "14px",
+              lineHeight: isMobile ? "1.6" : "1.8",
+            }}
+          >
             <li>Scan the QR code with your mobile device</li>
             <li>Position your face in good lighting</li>
-            <li>Ensure green dots appear on your face</li>
+            <li>Ensure blue dots appear on your face</li>
             <li>Tap "Capture Face" when prompted</li>
             <li>Wait for verification to complete</li>
           </ol>
         </div>
 
         {/* Warning */}
-        <div style={styles.warningBox}>
-          <span style={{ fontSize: '24px' }}>⚠️</span>
-          <p style={styles.warningText}>
-            <strong>Important:</strong> This will replace your current biometric data. 
-            Ensure you're in good lighting and your face is clearly visible.
+        <div
+          style={{
+            ...styles.warningBox,
+            padding: isMobile ? "12px" : "15px",
+            gap: isMobile ? "12px" : "15px",
+          }}
+        >
+          <span style={{ fontSize: isMobile ? "20px" : "24px" }}>⚠️</span>
+          <p
+            style={{
+              ...styles.warningText,
+              fontSize: isMobile ? "12px" : "13px",
+            }}
+          >
+            <strong>Important:</strong> This will replace your current biometric
+            data. Ensure you're in good lighting and your face is clearly
+            visible.
           </p>
         </div>
       </div>
@@ -212,206 +396,178 @@ function UpdateFaceData() {
 
 const styles = {
   container: {
-    minHeight: '100vh',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '20px'
+    minHeight: "100vh",
+    background: "#050816",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "20px",
   },
   card: {
-    backgroundColor: 'white',
-    borderRadius: '20px',
-    padding: '30px',
-    maxWidth: '600px',
-    width: '100%',
-    boxShadow: '0 10px 40px rgba(0,0,0,0.3)'
+    background:
+      "linear-gradient(135deg, rgba(20, 24, 82, 0.8), rgba(30, 30, 70, 0.6))",
+    border: "1px solid rgba(0, 212, 255, 0.2)",
+    borderRadius: "20px",
+    width: "100%",
+    boxShadow: "0 20px 60px rgba(0, 212, 255, 0.2)",
+    backdropFilter: "blur(20px)",
   },
   header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '15px'
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   backBtn: {
-    padding: '10px 20px',
-    backgroundColor: '#6c757d',
-    color: 'white',
-    border: 'none',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: 'bold'
+    background: "rgba(0, 212, 255, 0.15)",
+    color: "#00d4ff",
+    border: "1px solid rgba(0, 212, 255, 0.3)",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontWeight: "700",
+    transition: "all 0.3s ease",
   },
   title: {
-    fontSize: '28px',
     margin: 0,
-    color: '#333',
-    textAlign: 'center',
-    flex: 1
+    color: "#fff",
+    textAlign: "center",
+    flex: 1,
+    fontWeight: "800",
   },
   subtitle: {
-    textAlign: 'center',
-    color: '#666',
-    fontSize: '14px',
-    marginBottom: '25px'
+    textAlign: "center",
+    color: "#b0b0c9",
+    fontWeight: "500",
   },
   qrContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    marginBottom: '25px'
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
   },
   qrBox: {
-    backgroundColor: '#fff',
-    padding: '15px',
-    borderRadius: '12px',
-    border: '2px solid #667eea',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-    marginBottom: '15px'
-  },
-  qrCanvas: {
-    maxWidth: '100%',
-    height: 'auto'
+    background: "#fff",
+    borderRadius: "12px",
+    border: "2px solid rgba(0, 212, 255, 0.3)",
+    boxShadow: "0 10px 30px rgba(0, 212, 255, 0.2)",
+    marginBottom: "15px",
   },
   qrHint: {
-    color: '#666',
-    fontSize: '14px',
-    margin: '0 0 10px 0',
-    fontWeight: '600'
+    color: "#b0b0c9",
+    margin: "0 0 10px 0",
+    fontWeight: "600",
   },
   manualLinkBox: {
-    backgroundColor: '#f0f4ff',
-    padding: '15px',
-    borderRadius: '8px',
-    border: '2px solid #667eea',
-    marginTop: '15px',
-    textAlign: 'center'
+    background: "rgba(0, 212, 255, 0.08)",
+    borderRadius: "8px",
+    border: "1px solid rgba(0, 212, 255, 0.2)",
+    marginTop: "15px",
+    textAlign: "center",
   },
   manualLinkLabel: {
-    color: '#666',
-    fontSize: '13px',
-    margin: '0 0 10px 0',
-    fontWeight: '500'
+    color: "#b0b0c9",
+    margin: "0 0 10px 0",
+    fontWeight: "500",
   },
   manualLink: {
-    display: 'inline-block',
-    padding: '10px 25px',
-    backgroundColor: '#667eea',
-    color: 'white',
-    textDecoration: 'none',
-    borderRadius: '6px',
-    fontWeight: '600',
-    fontSize: '14px',
-    transition: 'all 0.3s',
-    cursor: 'pointer'
+    display: "inline-block",
+    background: "linear-gradient(135deg, #00d4ff, #6366f1)",
+    color: "#000",
+    textDecoration: "none",
+    borderRadius: "6px",
+    fontWeight: "700",
+    transition: "all 0.3s",
+    cursor: "pointer",
+    boxShadow: "0 10px 30px rgba(0, 212, 255, 0.3)",
   },
   loadingContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '40px 20px'
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
   },
   loadingText: {
-    marginTop: '15px',
-    color: '#666',
-    fontSize: '16px',
-    fontWeight: '600'
+    marginTop: "15px",
+    color: "#b0b0c9",
+    fontWeight: "600",
   },
   verifyingContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '40px 20px',
-    backgroundColor: '#f0f4ff',
-    borderRadius: '12px',
-    marginBottom: '20px'
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "rgba(0, 212, 255, 0.08)",
+    borderRadius: "12px",
   },
   verifyingText: {
-    marginTop: '15px',
-    color: '#667eea',
-    fontSize: '16px',
-    fontWeight: '600'
+    marginTop: "15px",
+    color: "#00d4ff",
+    fontWeight: "600",
   },
   spinner: {
-    width: '50px',
-    height: '50px',
-    border: '5px solid rgba(102, 126, 234, 0.3)',
-    borderTop: '5px solid #667eea',
-    borderRadius: '50%',
-    animation: 'spin 1s linear infinite'
+    border: "4px solid rgba(0, 212, 255, 0.2)",
+    borderTop: "4px solid #00d4ff",
+    borderRadius: "50%",
+    animation: "spin 1s linear infinite",
   },
   statusContainer: {
-    minHeight: '50px',
-    marginBottom: '20px'
+    minHeight: "50px",
   },
   statusText: {
-    color: '#667eea',
-    fontSize: '15px',
-    fontWeight: '600',
+    color: "#00d4ff",
+    fontWeight: "600",
     margin: 0,
-    textAlign: 'center',
-    padding: '12px',
-    backgroundColor: '#f0f4ff',
-    borderRadius: '8px'
+    textAlign: "center",
+    background: "rgba(0, 212, 255, 0.1)",
+    borderRadius: "8px",
+    border: "1px solid rgba(0, 212, 255, 0.3)",
   },
   error: {
-    color: '#dc3545',
+    color: "#ef4444",
     margin: 0,
-    textAlign: 'center',
-    padding: '12px',
-    backgroundColor: '#f8d7da',
-    borderRadius: '8px',
-    fontWeight: '600',
-    border: '1px solid #f5c6cb'
+    textAlign: "center",
+    background: "rgba(239, 68, 68, 0.1)",
+    borderRadius: "8px",
+    fontWeight: "600",
+    border: "1px solid rgba(239, 68, 68, 0.3)",
   },
   success: {
-    color: '#155724',
+    color: "#00d4ff",
     margin: 0,
-    textAlign: 'center',
-    padding: '12px',
-    backgroundColor: '#d4edda',
-    borderRadius: '8px',
-    fontWeight: '600',
-    border: '1px solid #c3e6cb'
+    textAlign: "center",
+    background: "rgba(0, 212, 255, 0.1)",
+    borderRadius: "8px",
+    fontWeight: "600",
+    border: "1px solid rgba(0, 212, 255, 0.3)",
   },
   instructions: {
-    backgroundColor: '#f8f9fa',
-    padding: '20px',
-    borderRadius: '12px',
-    border: '1px solid #dee2e6',
-    marginBottom: '15px'
+    background: "rgba(0, 212, 255, 0.08)",
+    borderRadius: "12px",
+    border: "1px solid rgba(0, 212, 255, 0.2)",
   },
   instructionTitle: {
-    margin: '0 0 15px 0',
-    fontSize: '16px',
-    fontWeight: 'bold',
-    color: '#333'
+    margin: "0",
+    fontWeight: "700",
+    color: "#b0b0c9",
+    textTransform: "uppercase",
+    letterSpacing: "1px",
   },
   instructionList: {
     margin: 0,
-    paddingLeft: '20px',
-    fontSize: '14px',
-    color: '#666',
-    lineHeight: '1.8'
+    paddingLeft: "20px",
+    color: "#b0b0c9",
   },
   warningBox: {
-    backgroundColor: '#fff3cd',
-    padding: '15px',
-    borderRadius: '10px',
-    border: '2px solid #ffc107',
-    display: 'flex',
-    gap: '15px',
-    alignItems: 'flex-start'
+    background: "rgba(251, 191, 36, 0.1)",
+    borderRadius: "10px",
+    border: "1px solid rgba(251, 191, 36, 0.3)",
+    display: "flex",
+    alignItems: "flex-start",
   },
   warningText: {
     margin: 0,
-    fontSize: '13px',
-    color: '#856404',
-    lineHeight: '1.6'
-  }
+    color: "#fbbf24",
+    lineHeight: "1.6",
+    fontWeight: "500",
+  },
 };
 
 // Add animation
@@ -422,8 +578,8 @@ styleSheet.innerText = `
     100% { transform: rotate(360deg); }
   }
 `;
-if (!document.head.querySelector('style[data-update-face]')) {
-  styleSheet.setAttribute('data-update-face', 'true');
+if (!document.head.querySelector("style[data-update-face]")) {
+  styleSheet.setAttribute("data-update-face", "true");
   document.head.appendChild(styleSheet);
 }
 

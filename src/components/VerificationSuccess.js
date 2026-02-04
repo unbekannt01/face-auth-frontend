@@ -1,12 +1,31 @@
-'use client';
+"use client";
 
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+// Custom hook for responsive breakpoints
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(
+    typeof window !== "undefined" ? window.matchMedia(query).matches : false,
+  );
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    const handler = (e) => setMatches(e.matches);
+    media.addEventListener("change", handler);
+    setMatches(media.matches);
+    return () => media.removeEventListener("change", handler);
+  }, [query]);
+  return matches;
+}
+
 function VerificationSuccess() {
   const navigate = useNavigate();
   const [countdown, setCountdown] = useState(5);
+
+  // Responsive breakpoints
+  const isMobile = useMediaQuery("(max-width: 480px)");
+  const isTablet = useMediaQuery("(max-width: 768px)");
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -78,10 +97,35 @@ function VerificationSuccess() {
 
   return (
     <div style={styles.container}>
-      <div style={styles.card}>
-        <div style={styles.iconContainer}>
-          <div style={styles.checkmarkCircle}>
-            <svg style={styles.checkmark} viewBox="0 0 52 52">
+      <div
+        style={{
+          ...styles.card,
+          padding: isMobile ? "30px 20px" : isTablet ? "40px 30px" : "50px",
+          maxWidth: isMobile ? "100%" : "500px",
+          margin: isMobile ? "0 16px" : "0",
+        }}
+      >
+        <div
+          style={{
+            ...styles.iconContainer,
+            marginBottom: isMobile ? "20px" : "30px",
+          }}
+        >
+          <div
+            style={{
+              ...styles.checkmarkCircle,
+              width: isMobile ? "80px" : "100px",
+              height: isMobile ? "80px" : "100px",
+            }}
+          >
+            <svg
+              style={{
+                ...styles.checkmark,
+                width: isMobile ? "80px" : "100px",
+                height: isMobile ? "80px" : "100px",
+              }}
+              viewBox="0 0 52 52"
+            >
               <circle
                 style={styles.checkmarkCircle}
                 cx="26"
@@ -98,21 +142,64 @@ function VerificationSuccess() {
           </div>
         </div>
 
-        <h1 style={styles.title}>✓ Verification Successful!</h1>
+        <h1
+          style={{
+            ...styles.title,
+            fontSize: isMobile ? "24px" : isTablet ? "28px" : "32px",
+            marginBottom: isMobile ? "12px" : "15px",
+          }}
+        >
+          ✓ Verification Successful!
+        </h1>
 
-        <p style={styles.message}>Your face has been verified successfully.</p>
+        <p
+          style={{
+            ...styles.message,
+            fontSize: isMobile ? "14px" : "16px",
+            marginBottom: isMobile ? "20px" : "30px",
+          }}
+        >
+          Your face has been verified successfully.
+        </p>
 
-        <div style={styles.infoBox}>
-          <p style={styles.infoText}>
+        <div
+          style={{
+            ...styles.infoBox,
+            padding: isMobile ? "15px" : "20px",
+            marginBottom: isMobile ? "20px" : "30px",
+          }}
+        >
+          <p
+            style={{
+              ...styles.infoText,
+              fontSize: isMobile ? "13px" : "15px",
+            }}
+          >
             💻 Return to your computer to complete the process.
           </p>
-          <p style={styles.infoSubtext}>
+          <p
+            style={{
+              ...styles.infoSubtext,
+              fontSize: isMobile ? "12px" : "13px",
+            }}
+          >
             You can safely close this mobile tab.
           </p>
         </div>
 
-        <div style={styles.progressContainer}>
-          <div style={styles.progressText}>
+        <div
+          style={{
+            ...styles.progressContainer,
+            marginBottom: isMobile ? "20px" : "30px",
+          }}
+        >
+          <div
+            style={{
+              ...styles.progressText,
+              fontSize: isMobile ? "12px" : "13px",
+              marginBottom: isMobile ? "10px" : "12px",
+            }}
+          >
             Auto redirect in {countdown} seconds...
           </div>
           <div style={styles.progressBar}>
@@ -125,27 +212,80 @@ function VerificationSuccess() {
           </div>
         </div>
 
-        <div style={styles.buttonGroup}>
-          <button onClick={handleBackToComputer} style={styles.primaryButton}>
+        <div
+          style={{
+            ...styles.buttonGroup,
+            marginBottom: isMobile ? "20px" : "30px",
+            flexDirection: isMobile ? "column" : "row",
+            gap: isMobile ? "10px" : "10px",
+          }}
+        >
+          <button
+            onClick={handleBackToComputer}
+            style={{
+              ...styles.primaryButton,
+              padding: isMobile ? "12px" : "14px",
+              fontSize: isMobile ? "13px" : "15px",
+              minWidth: isMobile ? "100%" : "200px",
+            }}
+          >
             💻 Return to Computer
           </button>
 
-          <button onClick={handleCloseWindow} style={styles.secondaryButton}>
+          <button
+            onClick={handleCloseWindow}
+            style={{
+              ...styles.secondaryButton,
+              padding: isMobile ? "12px" : "14px",
+              fontSize: isMobile ? "13px" : "15px",
+              minWidth: isMobile ? "100%" : "200px",
+            }}
+          >
             ✕ Close This Tab
           </button>
         </div>
 
-        <div style={styles.successDetails}>
-          <h3 style={styles.detailsTitle}>What's Next?</h3>
-          <ul style={styles.detailsList}>
+        <div
+          style={{
+            ...styles.successDetails,
+            padding: isMobile ? "15px" : "20px",
+            marginBottom: isMobile ? "15px" : "20px",
+          }}
+        >
+          <h3
+            style={{
+              ...styles.detailsTitle,
+              fontSize: isMobile ? "14px" : "16px",
+              marginBottom: isMobile ? "12px" : "15px",
+            }}
+          >
+            What's Next?
+          </h3>
+          <ul
+            style={{
+              ...styles.detailsList,
+              fontSize: isMobile ? "12px" : "13px",
+              lineHeight: isMobile ? "1.8" : "2",
+            }}
+          >
             <li>✓ Go back to your computer</li>
             <li>✓ Your login/registration will complete automatically</li>
             <li>✓ You're all set!</li>
           </ul>
         </div>
 
-        <div style={styles.mobileNote}>
-          <p style={styles.mobileNoteText}>
+        <div
+          style={{
+            ...styles.mobileNote,
+            padding: isMobile ? "12px" : "15px",
+          }}
+        >
+          <p
+            style={{
+              ...styles.mobileNoteText,
+              fontSize: isMobile ? "12px" : "13px",
+            }}
+          >
             📱 <strong>Mobile Users:</strong> You will be redirected to the home
             page automatically.
           </p>
@@ -166,13 +306,13 @@ const styles = {
     position: "relative",
   },
   card: {
-    background: "linear-gradient(135deg, rgba(20, 24, 82, 0.8), rgba(30, 30, 70, 0.6))",
+    background:
+      "linear-gradient(135deg, rgba(20, 24, 82, 0.8), rgba(30, 30, 70, 0.6))",
     border: "1px solid rgba(0, 212, 255, 0.2)",
     borderRadius: "20px",
-    padding: "50px",
-    maxWidth: "500px",
     width: "100%",
-    boxShadow: "0 20px 60px rgba(0, 212, 255, 0.2), 0 0 40px rgba(0, 212, 255, 0.1)",
+    boxShadow:
+      "0 20px 60px rgba(0, 212, 255, 0.2), 0 0 40px rgba(0, 212, 255, 0.1)",
     backdropFilter: "blur(20px)",
     textAlign: "center",
     position: "relative",
@@ -181,29 +321,26 @@ const styles = {
   iconContainer: {
     display: "flex",
     justifyContent: "center",
-    marginBottom: "30px",
   },
   checkmarkCircle: {
-    width: "100px",
-    height: "100px",
     borderRadius: "50%",
     display: "block",
     strokeWidth: "3",
     stroke: "#00d4ff",
     strokeMiterlimit: "10",
     boxShadow: "inset 0px 0px 0px #00d4ff, 0 0 30px rgba(0, 212, 255, 0.4)",
-    animation: "fill 0.4s ease-in-out 0.4s forwards, scale 0.3s ease-in-out 0.9s both",
+    animation:
+      "fill 0.4s ease-in-out 0.4s forwards, scale 0.3s ease-in-out 0.9s both",
   },
   checkmark: {
-    width: "100px",
-    height: "100px",
     borderRadius: "50%",
     display: "block",
     strokeWidth: "3",
     stroke: "#fff",
     strokeMiterlimit: "10",
     boxShadow: "inset 0px 0px 0px #00d4ff",
-    animation: "fill 0.4s ease-in-out 0.4s forwards, scale 0.3s ease-in-out 0.9s both",
+    animation:
+      "fill 0.4s ease-in-out 0.4s forwards, scale 0.3s ease-in-out 0.9s both",
   },
   checkmarkCheck: {
     transformOrigin: "50% 50%",
@@ -212,44 +349,32 @@ const styles = {
     animation: "stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.8s forwards",
   },
   title: {
-    fontSize: "32px",
     fontWeight: "800",
     color: "#fff",
-    marginBottom: "15px",
-    margin: "0 0 15px 0",
+    margin: "0",
   },
   message: {
-    fontSize: "16px",
     color: "#b0b0c9",
-    marginBottom: "30px",
     lineHeight: "1.6",
   },
   infoBox: {
     background: "rgba(0, 212, 255, 0.1)",
-    padding: "20px",
     borderRadius: "12px",
     border: "1px solid rgba(0, 212, 255, 0.3)",
-    marginBottom: "30px",
   },
   infoText: {
     margin: "0 0 10px 0",
     color: "#00d4ff",
-    fontSize: "15px",
     fontWeight: "700",
   },
   infoSubtext: {
     margin: 0,
     color: "#b0b0c9",
-    fontSize: "13px",
     fontWeight: "500",
   },
-  progressContainer: {
-    marginBottom: "30px",
-  },
+  progressContainer: {},
   progressText: {
-    fontSize: "13px",
     color: "#b0b0c9",
-    marginBottom: "12px",
     fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: "0.5px",
@@ -269,15 +394,10 @@ const styles = {
   },
   buttonGroup: {
     display: "flex",
-    gap: "10px",
-    marginBottom: "30px",
     flexWrap: "wrap",
   },
   primaryButton: {
     flex: 1,
-    minWidth: "200px",
-    padding: "14px",
-    fontSize: "15px",
     fontWeight: "700",
     background: "linear-gradient(135deg, #00d4ff, #6366f1)",
     color: "#000",
@@ -291,9 +411,6 @@ const styles = {
   },
   secondaryButton: {
     flex: 1,
-    minWidth: "200px",
-    padding: "14px",
-    fontSize: "15px",
     fontWeight: "700",
     background: "rgba(0, 212, 255, 0.15)",
     color: "#00d4ff",
@@ -306,18 +423,14 @@ const styles = {
   },
   successDetails: {
     background: "rgba(0, 212, 255, 0.08)",
-    padding: "20px",
     borderRadius: "12px",
     border: "1px solid rgba(0, 212, 255, 0.2)",
     textAlign: "left",
-    marginBottom: "20px",
   },
   detailsTitle: {
-    fontSize: "16px",
     fontWeight: "700",
     color: "#b0b0c9",
-    marginBottom: "15px",
-    margin: "0 0 15px 0",
+    margin: "0",
     textTransform: "uppercase",
     letterSpacing: "1px",
   },
@@ -325,18 +438,14 @@ const styles = {
     margin: 0,
     paddingLeft: "20px",
     color: "#b0b0c9",
-    lineHeight: "2",
-    fontSize: "13px",
   },
   mobileNote: {
     background: "rgba(0, 212, 255, 0.1)",
-    padding: "15px",
     borderRadius: "10px",
     border: "1px solid rgba(0, 212, 255, 0.3)",
   },
   mobileNoteText: {
     margin: 0,
-    fontSize: "13px",
     color: "#b0b0c9",
     lineHeight: "1.6",
     fontWeight: "500",
@@ -363,12 +472,6 @@ styleSheet.innerText = `
   @keyframes fill {
     100% {
       box-shadow: inset 0px 0px 0px 30px #00d4ff;
-    }
-  }
-
-  @media (max-width: 600px) {
-    .buttonGroup {
-      flex-direction: column;
     }
   }
 `;

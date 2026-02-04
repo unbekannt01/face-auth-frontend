@@ -6,6 +6,21 @@ import React, { useRef, useEffect, useState } from 'react';
 import * as faceapi from 'face-api.js/dist/face-api.min.js';
 import faceDetectionService from '../utils/faceDetection';
 
+// Custom hook for responsive breakpoints
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(
+    typeof window !== "undefined" ? window.matchMedia(query).matches : false
+  );
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    const handler = (e) => setMatches(e.matches);
+    media.addEventListener("change", handler);
+    setMatches(media.matches);
+    return () => media.removeEventListener("change", handler);
+  }, [query]);
+  return matches;
+}
+
 function FaceCapture({ onCapture, buttonText = "Capture Face" }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -14,11 +29,11 @@ function FaceCapture({ onCapture, buttonText = "Capture Face" }) {
   const [faceDetected, setFaceDetected] = useState(false);
   const [stream, setStream] = useState(null);
 
+  const isMobile = useMediaQuery("(max-width: 480px)");
+
   useEffect(() => {
     startVideo();
-    return () => {
-      stopVideo();
-    };
+    return () => { stopVideo(); };
   }, []);
 
   const startVideo = async () => {
@@ -26,14 +41,12 @@ function FaceCapture({ onCapture, buttonText = "Capture Face" }) {
       setIsLoading(true);
       setError('');
 
-      // Load face detection models
       await faceDetectionService.loadModels();
 
-      // Get video stream
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          width: 640, 
-          height: 480,
+        video: {
+          width: { ideal: isMobile ? 480 : 640 },
+          height: { ideal: isMobile ? 360 : 480 },
           facingMode: 'user'
         }
       });
@@ -61,7 +74,6 @@ function FaceCapture({ onCapture, buttonText = "Capture Face" }) {
     if (!isLoading && videoRef.current) {
       const interval = setInterval(async () => {
         const detection = await faceDetectionService.detectFace(videoRef.current);
-        
         if (detection) {
           setFaceDetected(true);
           drawDetection(detection);
@@ -70,7 +82,6 @@ function FaceCapture({ onCapture, buttonText = "Capture Face" }) {
           clearCanvas();
         }
       }, 500);
-
       return () => clearInterval(interval);
     }
   }, [isLoading]);
@@ -90,18 +101,14 @@ function FaceCapture({ onCapture, buttonText = "Capture Face" }) {
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw face box - BLUE COLOR
+    // Draw face box
     const box = resizedDetection.detection.box;
     ctx.strokeStyle = '#00d4ff';
     ctx.lineWidth = 3;
     ctx.strokeRect(box.x, box.y, box.width, box.height);
 
-    // Draw landmarks - BLUE COLOR
-    const landmarks = resizedDetection.landmarks;
-    const drawOptions = {
-      lineWidth: 2,
-      color: '#00d4ff'
-    };
+    // Draw landmarks
+    const drawOptions = { lineWidth: 2, color: '#00d4ff' };
     faceapi.draw.drawFaceLandmarks(canvas, resizedDetection, drawOptions);
   };
 
@@ -139,14 +146,31 @@ function FaceCapture({ onCapture, buttonText = "Capture Face" }) {
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.videoContainer}>
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      gap: isMobile ? '14px' : '20px',
+      padding: isMobile ? '12px' : '20px',
+      background: '#050816', minHeight: '100vh'
+    }}>
+      {/* Video Box - fluid width on mobile */}
+      <div style={{
+        position: 'relative',
+        width: isMobile ? '100%' : '640px',
+        maxWidth: '640px',
+        aspectRatio: '4 / 3',   /* keeps 4:3 ratio at any width */
+        backgroundColor: '#000',
+        borderRadius: '16px',
+        overflow: 'hidden',
+        border: '2px solid rgba(0, 212, 255, 0.4)',
+        boxShadow: '0 20px 60px rgba(0, 212, 255, 0.3)',
+        animation: 'glowPulse 3s ease-in-out infinite'
+      }}>
         <video
           ref={videoRef}
           autoPlay
           muted
           playsInline
-          style={styles.video}
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           onLoadedMetadata={() => {
             if (canvasRef.current && videoRef.current) {
               canvasRef.current.width = videoRef.current.videoWidth;
@@ -154,165 +178,87 @@ function FaceCapture({ onCapture, buttonText = "Capture Face" }) {
             }
           }}
         />
-        <canvas ref={canvasRef} style={styles.canvas} />
-        
+        <canvas
+          ref={canvasRef}
+          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+        />
+
         {isLoading && (
-          <div style={styles.overlay}>
-            <div style={styles.spinner}></div>
-            <p style={styles.loadingText}>Loading camera and AI models...</p>
+          <div style={{
+            position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            justifyContent: 'center', color: '#00d4ff', fontSize: '15px', fontWeight: '600'
+          }}>
+            <div style={{
+              width: '44px', height: '44px',
+              border: '4px solid rgba(0, 212, 255, 0.2)',
+              borderTop: '4px solid #00d4ff', borderRadius: '50%',
+              animation: 'spin 1s linear infinite', marginBottom: '14px'
+            }}></div>
+            <p style={{ margin: 0, color: '#00d4ff', fontSize: isMobile ? '13px' : '16px' }}>
+              Loading camera & AI models...
+            </p>
           </div>
         )}
       </div>
 
-      <div style={styles.statusContainer}>
+      {/* Status */}
+      <div style={{ minHeight: '24px', textAlign: 'center' }}>
         {faceDetected && (
-          <p style={styles.statusSuccess}>✓ Face detected</p>
+          <p style={{ color: '#00d4ff', fontWeight: '700', margin: 0, fontSize: '13px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+            ✓ Face detected
+          </p>
         )}
         {!faceDetected && !isLoading && (
-          <p style={styles.statusWarning}>Position your face in the frame</p>
+          <p style={{ color: '#fbbf24', margin: 0, fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Position your face in the frame
+          </p>
         )}
-        {error && <p style={styles.error}>{error}</p>}
+        {error && (
+          <p style={{
+            color: '#ef4444', margin: 0, fontSize: '13px', fontWeight: '600',
+            padding: '10px 14px', background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px'
+          }}>{error}</p>
+        )}
       </div>
 
+      {/* Capture Button */}
       <button
         onClick={handleCapture}
         disabled={!faceDetected || isLoading}
         style={{
-          ...styles.button,
+          padding: isMobile ? '13px 32px' : '14px 40px',
+          fontSize: isMobile ? '14px' : '16px',
+          fontWeight: '700',
+          background: 'linear-gradient(135deg, #00d4ff, #6366f1)',
+          color: '#000', border: 'none', borderRadius: '10px',
+          cursor: !faceDetected || isLoading ? 'not-allowed' : 'pointer',
+          transition: 'all 0.3s ease',
+          boxShadow: '0 10px 30px rgba(0, 212, 255, 0.3)',
+          textTransform: 'uppercase', letterSpacing: '1px',
           opacity: !faceDetected || isLoading ? 0.5 : 1,
-          cursor: !faceDetected || isLoading ? 'not-allowed' : 'pointer'
+          width: isMobile ? '100%' : 'auto',
+          maxWidth: isMobile ? '320px' : 'none',
         }}
       >
         {buttonText}
       </button>
+
+      {/* Animations */}
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes glowPulse {
+          0%, 100% { box-shadow: 0 20px 60px rgba(0, 212, 255, 0.3); }
+          50% { box-shadow: 0 20px 80px rgba(0, 212, 255, 0.5); }
+        }
+      `}</style>
     </div>
   );
-}
-
-const styles = {
-  container: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '20px',
-    padding: '20px',
-    background: '#050816',
-    minHeight: '100vh'
-  },
-  videoContainer: {
-    position: 'relative',
-    width: '640px',
-    maxWidth: '100%',
-    height: '480px',
-    backgroundColor: '#000',
-    borderRadius: '16px',
-    overflow: 'hidden',
-    border: '2px solid rgba(0, 212, 255, 0.4)',
-    boxShadow: '0 20px 60px rgba(0, 212, 255, 0.3)',
-    animation: 'glowPulse 3s ease-in-out infinite'
-  },
-  video: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover'
-  },
-  canvas: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%'
-  },
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: '#00d4ff',
-    fontSize: '16px',
-    fontWeight: '600'
-  },
-  spinner: {
-    width: '50px',
-    height: '50px',
-    border: '4px solid rgba(0, 212, 255, 0.2)',
-    borderTop: '4px solid #00d4ff',
-    borderRadius: '50%',
-    animation: 'spin 1s linear infinite',
-    marginBottom: '15px'
-  },
-  loadingText: {
-    margin: 0,
-    color: '#00d4ff'
-  },
-  statusContainer: {
-    minHeight: '30px',
-    textAlign: 'center'
-  },
-  statusSuccess: {
-    color: '#00d4ff',
-    fontWeight: '700',
-    margin: 0,
-    fontSize: '14px',
-    textTransform: 'uppercase',
-    letterSpacing: '1px'
-  },
-  statusWarning: {
-    color: '#fbbf24',
-    margin: 0,
-    fontSize: '14px',
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px'
-  },
-  error: {
-    color: '#ef4444',
-    margin: 0,
-    fontSize: '13px',
-    fontWeight: '600',
-    padding: '12px',
-    background: 'rgba(239, 68, 68, 0.1)',
-    border: '1px solid rgba(239, 68, 68, 0.3)',
-    borderRadius: '8px'
-  },
-  button: {
-    padding: '14px 40px',
-    fontSize: '16px',
-    fontWeight: '700',
-    background: 'linear-gradient(135deg, #00d4ff, #6366f1)',
-    color: '#000',
-    border: 'none',
-    borderRadius: '10px',
-    cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    boxShadow: '0 10px 30px rgba(0, 212, 255, 0.3)',
-    textTransform: 'uppercase',
-    letterSpacing: '1px'
-  }
-};
-
-// Add spinner animation
-const styleSheet = document.createElement("style");
-styleSheet.innerText = `
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-  
-  @keyframes glowPulse {
-    0%, 100% { box-shadow: 0 20px 60px rgba(0, 212, 255, 0.3); }
-    50% { box-shadow: 0 20px 80px rgba(0, 212, 255, 0.5); }
-  }
-`;
-if (!document.head.querySelector('style[data-face-capture]')) {
-  styleSheet.setAttribute('data-face-capture', 'true');
-  document.head.appendChild(styleSheet);
 }
 
 export default FaceCapture;

@@ -10,6 +10,21 @@ import { config } from '../config';
 
 const socket = io(config.API_URL);
 
+// Custom hook for responsive breakpoints
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(
+    typeof window !== 'undefined' ? window.matchMedia(query).matches : false
+  );
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    const handler = (e) => setMatches(e.matches);
+    media.addEventListener('change', handler);
+    setMatches(media.matches);
+    return () => media.removeEventListener('change', handler);
+  }, [query]);
+  return matches;
+}
+
 function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
@@ -18,6 +33,10 @@ function Login() {
   const [showQR, setShowQR] = useState(false);
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Responsive breakpoints
+  const isMobile = useMediaQuery('(max-width: 480px)');
+  const isTablet = useMediaQuery('(max-width: 768px)');
 
   useEffect(() => {
     localStorage.removeItem('authToken');
@@ -89,21 +108,60 @@ function Login() {
 
   const qrData = `${config.APP_URL}/mobile-verify/${sessionId}`;
 
+  // Responsive QR size
+  const qrSize = isMobile ? 180 : isTablet ? 200 : 220;
+
   return (
     <div style={styles.container}>
       {/* Background Elements */}
-      <div style={styles.bgBlob1}></div>
-      <div style={styles.bgBlob2}></div>
+      <div style={{
+        ...styles.bgBlob1,
+        width: isMobile ? '300px' : '500px',
+        height: isMobile ? '300px' : '500px',
+      }}></div>
+      <div style={{
+        ...styles.bgBlob2,
+        width: isMobile ? '250px' : '400px',
+        height: isMobile ? '250px' : '400px',
+      }}></div>
 
-      <div style={styles.card}>
-        <button onClick={() => navigate('/')} style={styles.backBtn}>
+      <div style={{
+        ...styles.card,
+        padding: isMobile ? '30px 20px' : isTablet ? '40px 30px' : '50px 40px',
+        maxWidth: isMobile ? '100%' : '420px',
+        margin: isMobile ? '0 16px' : '0',
+      }}>
+        <button 
+          onClick={() => navigate('/')} 
+          style={{
+            ...styles.backBtn,
+            top: isMobile ? '15px' : '20px',
+            left: isMobile ? '15px' : '20px',
+            fontSize: isMobile ? '11px' : '12px',
+            padding: isMobile ? '6px 12px' : '8px 15px',
+          }}
+        >
           ← Back
         </button>
 
-        <div style={styles.header}>
-          <div style={styles.headerIcon}>⬡</div>
-          <h2 style={styles.title}>Sign In</h2>
-          <p style={styles.subtitle}>to your NeuroVerify account</p>
+        <div style={{
+          ...styles.header,
+          marginBottom: isMobile ? '20px' : '30px',
+          marginTop: isMobile ? '20px' : '0',
+        }}>
+          <div style={{
+            ...styles.headerIcon,
+            fontSize: isMobile ? '32px' : '40px',
+            marginBottom: isMobile ? '10px' : '15px',
+          }}>⬡</div>
+          <h2 style={{
+            ...styles.title,
+            fontSize: isMobile ? '22px' : isTablet ? '25px' : '28px',
+          }}>Sign In</h2>
+          <p style={{
+            ...styles.subtitle,
+            fontSize: isMobile ? '12px' : '14px',
+          }}>to your NeuroVerify account</p>
         </div>
 
         {!showQR ? (
@@ -115,7 +173,11 @@ function Login() {
               onChange={(e) => setEmail(e.target.value)}
               onKeyPress={handleKeyPress}
               disabled={loading}
-              style={styles.input}
+              style={{
+                ...styles.input,
+                padding: isMobile ? '12px 14px' : '14px 16px',
+                fontSize: isMobile ? '13px' : '14px',
+              }}
               onFocus={(e) => e.target.style.borderColor = '#00d4ff'}
               onBlur={(e) => e.target.style.borderColor = 'rgba(0, 212, 255, 0.2)'}
             />
@@ -127,7 +189,11 @@ function Login() {
               onChange={(e) => setPassword(e.target.value)}
               onKeyPress={handleKeyPress}
               disabled={loading}
-              style={styles.input}
+              style={{
+                ...styles.input,
+                padding: isMobile ? '12px 14px' : '14px 16px',
+                fontSize: isMobile ? '13px' : '14px',
+              }}
               onFocus={(e) => e.target.style.borderColor = '#00d4ff'}
               onBlur={(e) => e.target.style.borderColor = 'rgba(0, 212, 255, 0.2)'}
             />
@@ -135,25 +201,44 @@ function Login() {
             <button 
               onClick={handleLogin}
               disabled={loading}
-              style={{...styles.signInBtn, opacity: loading ? 0.6 : 1}}
+              style={{
+                ...styles.signInBtn,
+                opacity: loading ? 0.6 : 1,
+                padding: isMobile ? '12px' : '14px',
+                fontSize: isMobile ? '14px' : '16px',
+              }}
             >
               {loading ? '⏳ Verifying...' : 'Sign In with Face ID'}
             </button>
           </div>
         ) : (
-          <div style={styles.qrContainer}>
-            <p style={styles.qrLabel}>Scan to Verify Your Face</p>
-            <div style={styles.qrBox}>
+          <div style={{
+            ...styles.qrContainer,
+            padding: isMobile ? '15px' : '20px',
+          }}>
+            <p style={{
+              ...styles.qrLabel,
+              fontSize: isMobile ? '12px' : '14px',
+              marginBottom: isMobile ? '12px' : '15px',
+            }}>Scan to Verify Your Face</p>
+            <div style={{
+              ...styles.qrBox,
+              padding: isMobile ? '12px' : '15px',
+            }}>
               <QRCodeSVG 
                 value={qrData} 
-                size={220}
+                size={qrSize}
                 level="H"
                 includeMargin={true}
                 bgColor="#ffffff"
                 fgColor="#000000"
               />
             </div>
-            <p style={styles.qrInstructions}>
+            <p style={{
+              ...styles.qrInstructions,
+              fontSize: isMobile ? '11px' : '13px',
+              marginBottom: isMobile ? '15px' : '20px',
+            }}>
               Open your phone camera and point it at this code
             </p>
             <button
@@ -162,7 +247,11 @@ function Login() {
                 setStatus('');
                 setLoading(false);
               }}
-              style={styles.backToFormBtn}
+              style={{
+                ...styles.backToFormBtn,
+                padding: isMobile ? '10px' : '12px',
+                fontSize: isMobile ? '13px' : '14px',
+              }}
             >
               Back to Form
             </button>
@@ -174,7 +263,9 @@ function Login() {
             ...styles.statusMessage,
             borderColor: status.includes('✗') ? 'rgba(239, 68, 68, 0.3)' : 'rgba(0, 212, 255, 0.3)',
             background: status.includes('✗') ? 'rgba(239, 68, 68, 0.1)' : 'rgba(0, 212, 255, 0.1)',
-            color: status.includes('✗') ? '#ef4444' : '#00d4ff'
+            color: status.includes('✗') ? '#ef4444' : '#00d4ff',
+            padding: isMobile ? '10px 12px' : '12px 14px',
+            fontSize: isMobile ? '12px' : '13px',
           }}>
             {status}
           </div>
@@ -182,11 +273,19 @@ function Login() {
 
         <div style={styles.divider}></div>
 
-        <p style={styles.signupPrompt}>
+        <p style={{
+          ...styles.signupPrompt,
+          fontSize: isMobile ? '12px' : '13px',
+        }}>
           Don't have an account? <button onClick={() => navigate('/register')} style={styles.signupLink}>Create one</button>
         </p>
 
-        <div style={styles.securityNote}>
+        <div style={{
+          ...styles.securityNote,
+          padding: isMobile ? '10px' : '12px',
+          fontSize: isMobile ? '11px' : '12px',
+          gap: isMobile ? '8px' : '10px',
+        }}>
           <span>🔐</span>
           <span>Your biometric data is encrypted and never shared</span>
         </div>
@@ -202,14 +301,12 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '40px 20px',
+    padding: '20px',
     position: 'relative',
     overflow: 'auto'
   },
   bgBlob1: {
     position: 'fixed',
-    width: '500px',
-    height: '500px',
     borderRadius: '50%',
     background: 'radial-gradient(circle, rgba(0, 212, 255, 0.25) 0%, transparent 70%)',
     top: '-100px',
@@ -220,8 +317,6 @@ const styles = {
   },
   bgBlob2: {
     position: 'fixed',
-    width: '400px',
-    height: '400px',
     borderRadius: '50%',
     background: 'radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, transparent 70%)',
     bottom: '-100px',
@@ -232,50 +327,39 @@ const styles = {
   },
   card: {
     width: '100%',
-    maxWidth: '420px',
     background: 'linear-gradient(135deg, rgba(20, 24, 82, 0.8), rgba(30, 30, 70, 0.6))',
     border: '1px solid rgba(0, 212, 255, 0.2)',
     borderRadius: '20px',
-    padding: '50px 40px',
     boxShadow: '0 20px 60px rgba(0, 212, 255, 0.2), 0 0 40px rgba(0, 212, 255, 0.1)',
     backdropFilter: 'blur(20px)',
     position: 'relative',
     zIndex: 1,
     animation: 'fadeInUp 0.6s ease-out',
-    maxHeight: 'calc(100vh - 80px)',
+    maxHeight: 'calc(100vh - 40px)',
     overflow: 'auto'
   },
   backBtn: {
     position: 'absolute',
-    top: '20px',
-    left: '20px',
     background: 'rgba(0, 212, 255, 0.15)',
     border: '1px solid rgba(0, 212, 255, 0.3)',
     color: '#00d4ff',
-    padding: '8px 15px',
     borderRadius: '8px',
-    fontSize: '12px',
     fontWeight: '600',
     cursor: 'pointer',
     transition: 'all 0.3s ease'
   },
   header: {
     textAlign: 'center',
-    marginBottom: '30px'
   },
   headerIcon: {
-    fontSize: '40px',
-    marginBottom: '15px',
     display: 'block'
   },
   title: {
-    fontSize: '28px',
     fontWeight: '800',
     color: '#fff',
     margin: '0 0 8px 0'
   },
   subtitle: {
-    fontSize: '14px',
     color: '#b0b0c9',
     margin: 0
   },
@@ -287,24 +371,21 @@ const styles = {
   },
   input: {
     width: '100%',
-    padding: '14px 16px',
+    boxSizing: 'border-box',
     background: 'rgba(0, 212, 255, 0.05)',
     border: '1px solid rgba(0, 212, 255, 0.2)',
     borderRadius: '10px',
     color: '#fff',
-    fontSize: '14px',
     outline: 'none',
     transition: 'all 0.3s ease',
     fontFamily: 'inherit'
   },
   signInBtn: {
     width: '100%',
-    padding: '14px',
     background: 'linear-gradient(135deg, #00d4ff, #6366f1)',
     color: '#000',
     border: 'none',
     borderRadius: '10px',
-    fontSize: '16px',
     fontWeight: '700',
     cursor: 'pointer',
     transition: 'all 0.3s ease',
@@ -313,48 +394,38 @@ const styles = {
   },
   qrContainer: {
     textAlign: 'center',
-    padding: '20px',
     background: 'rgba(0, 212, 255, 0.08)',
     borderRadius: '12px',
     marginBottom: '20px'
   },
   qrLabel: {
-    fontSize: '14px',
     color: '#b0b0c9',
-    marginBottom: '15px',
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: '1px'
   },
   qrBox: {
     background: '#fff',
-    padding: '15px',
     borderRadius: '12px',
     display: 'inline-block',
     boxShadow: '0 10px 30px rgba(0, 212, 255, 0.2)',
     marginBottom: '15px'
   },
   qrInstructions: {
-    fontSize: '13px',
     color: '#b0b0c9',
-    marginBottom: '20px'
   },
   backToFormBtn: {
     width: '100%',
-    padding: '12px',
     background: 'rgba(0, 212, 255, 0.15)',
     border: '1px solid rgba(0, 212, 255, 0.3)',
     color: '#00d4ff',
     borderRadius: '8px',
-    fontSize: '14px',
     fontWeight: '600',
     cursor: 'pointer',
     transition: 'all 0.3s ease'
   },
   statusMessage: {
-    padding: '12px 14px',
     borderRadius: '8px',
-    fontSize: '13px',
     fontWeight: '600',
     border: '1px solid',
     marginBottom: '15px'
@@ -365,7 +436,6 @@ const styles = {
     margin: '25px 0'
   },
   signupPrompt: {
-    fontSize: '13px',
     color: '#b0b0c9',
     textAlign: 'center',
     margin: '0 0 20px 0'
@@ -383,12 +453,10 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '10px',
-    padding: '12px',
     background: 'rgba(0, 212, 255, 0.05)',
     borderRadius: '8px',
-    fontSize: '12px',
-    color: '#b0b0c9'
+    color: '#b0b0c9',
+    flexWrap: 'wrap',
   }
 };
 
