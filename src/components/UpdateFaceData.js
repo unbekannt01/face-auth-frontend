@@ -2,7 +2,7 @@
 
 /* eslint-disable no-unused-vars */
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import axios from "axios";
@@ -28,6 +28,7 @@ function useMediaQuery(query) {
 
 function UpdateFaceData() {
   const navigate = useNavigate();
+  const startedRef = useRef(false);
   const [sessionId, setSessionId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -46,6 +47,9 @@ function UpdateFaceData() {
   const isTablet = useMediaQuery("(max-width: 768px)");
 
   useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+
     const token = localStorage.getItem("authToken");
     if (!token) {
       navigate("/login");
@@ -57,19 +61,16 @@ function UpdateFaceData() {
       console.log("[Socket] Connected to server");
     }
 
-    // Listen for verification complete
     socket.on("face-verification-complete", (data) => {
       console.log("[UpdateFace] Verification complete:", data);
 
       if (data.sessionId === sessionId) {
         if (data.success) {
-          // Update progress
-          updateProgress(4); // Complete
-          setSuccess("✅ Face updated successfully!");
-          setStatus("✅ Face data has been updated in your account");
+          updateProgress(4);
+          setSuccess("Face updated successfully!");
+          setStatus("Face data has been updated in your account");
           setIsLoading(false);
 
-          // Update user data in localStorage with new timestamp
           const user = JSON.parse(localStorage.getItem("user") || "{}");
           user.faceUpdatedAt = new Date().toISOString();
           localStorage.setItem("user", JSON.stringify(user));
@@ -85,7 +86,6 @@ function UpdateFaceData() {
       }
     });
 
-    // Initiate update on mount
     initiateUpdate();
 
     return () => {
@@ -93,7 +93,7 @@ function UpdateFaceData() {
         socket.off("face-verification-complete");
       }
     };
-  }, [navigate, sessionId]);
+  }, [navigate]);
 
   const updateProgress = (stepIndex) => {
     setProgressSteps((prev) =>

@@ -29,6 +29,7 @@ function Dashboard() {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [showFaceConfirm, setShowFaceConfirm] = useState(false);
 
   const isMobile = useMediaQuery("(max-width: 480px)");
   const isTablet = useMediaQuery("(max-width: 768px)");
@@ -103,6 +104,23 @@ function Dashboard() {
         day: "numeric",
         hour: "2-digit",
         minute: "2-digit",
+      });
+    } catch {
+      return "Invalid Date";
+    }
+  };
+
+  const formatExactDateTime = (dateString) => {
+    if (!dateString) return "Never updated";
+
+    try {
+      return new Date(dateString).toLocaleString("en-IN", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
       });
     } catch {
       return "Invalid Date";
@@ -399,9 +417,10 @@ function Dashboard() {
           >
             <ActionButton
               label="Update Face"
-              onClick={() => navigate("/update-face")}
+              onClick={() => setShowFaceConfirm(true)}
               isMobile={isMobile}
             />
+
             <ActionButton
               label="Change Password"
               onClick={() => navigate("/change-password")}
@@ -433,6 +452,52 @@ function Dashboard() {
           </p>
         </div>
       </div>
+
+      {showFaceConfirm && (
+        <div style={modalOverlay}>
+          <div style={modalBox}>
+            <h3 style={modalTitle}>🔐 Update Face Authentication</h3>
+
+            <p style={modalText}>
+              Aapne apna face data last time is date & time par update kiya tha:
+            </p>
+
+            <p style={modalDate}>
+              {formatExactDateTime(userData?.faceUpdatedAt)}
+            </p>
+
+            <ul style={modalList}>
+              <li>Proper lighting hona chahiye</li>
+              <li>Face clearly visible hona chahiye</li>
+              <li>Camera stable rakhiye</li>
+            </ul>
+
+            <p style={modalWarning}>
+              ⚠️ Is process ke baad purana face data permanently replace ho
+              jayega.
+            </p>
+
+            <div style={modalActions}>
+              <button
+                style={cancelBtn}
+                onClick={() => setShowFaceConfirm(false)}
+              >
+                Cancel
+              </button>
+
+              <button
+                style={confirmBtn}
+                onClick={() => {
+                  setShowFaceConfirm(false);
+                  navigate("/update-face");
+                }}
+              >
+                Yes, Update Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes float {
@@ -556,5 +621,86 @@ function ActionButton({ label, onClick, isMobile }) {
     </button>
   );
 }
+const modalOverlay = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(0,0,0,0.7)",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  zIndex: 9999,
+};
+
+const modalBox = {
+  background: "linear-gradient(135deg,#0f1628,#1a1a3e)",
+  padding: "30px",
+  borderRadius: "16px",
+  maxWidth: "420px",
+  width: "90%",
+  border: "1px solid rgba(0,255,255,0.3)",
+  boxShadow: "0 20px 60px rgba(0,255,255,0.3)",
+};
+
+const modalTitle = {
+  margin: 0,
+  marginBottom: "12px",
+  color: "#00ffff",
+  textAlign: "center",
+};
+
+const modalText = {
+  color: "#b0b0c9",
+  fontSize: "14px",
+  textAlign: "center",
+};
+
+const modalDate = {
+  textAlign: "center",
+  color: "#00ffff",
+  fontWeight: "700",
+  marginBottom: "12px",
+};
+
+const modalList = {
+  color: "#b0b0c9",
+  fontSize: "13px",
+  marginLeft: "20px",
+  marginBottom: "12px",
+};
+
+const modalWarning = {
+  color: "#fbbf24",
+  fontSize: "13px",
+  textAlign: "center",
+  marginBottom: "16px",
+};
+
+const modalActions = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: "12px",
+};
+
+const cancelBtn = {
+  flex: 1,
+  padding: "10px",
+  background: "rgba(239,68,68,0.15)",
+  color: "#ef4444",
+  border: "1px solid rgba(239,68,68,0.3)",
+  borderRadius: "8px",
+  cursor: "pointer",
+  fontWeight: "700",
+};
+
+const confirmBtn = {
+  flex: 1,
+  padding: "10px",
+  background: "linear-gradient(135deg,#00ffff,#6366f1)",
+  color: "#000",
+  border: "none",
+  borderRadius: "8px",
+  cursor: "pointer",
+  fontWeight: "800",
+};
 
 export default Dashboard;
