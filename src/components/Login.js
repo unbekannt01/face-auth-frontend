@@ -39,10 +39,12 @@ function Login() {
   const isTablet = useMediaQuery("(max-width: 768px)");
 
   useEffect(() => {
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
-    sessionStorage.clear();
+    if (!showQR) {
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      sessionStorage.clear();
+    }
 
     socket.on("face-verification-complete", async (data) => {
       if (data.sessionId === sessionId) {
@@ -74,7 +76,7 @@ function Login() {
     });
 
     return () => socket.off("face-verification-complete");
-  }, [sessionId, navigate]);
+  }, [sessionId, navigate, showQR]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -98,8 +100,6 @@ function Login() {
 
     try {
       setLoading(true);
-
-      console.log("[Login] Validating credentials...");
 
       const validateResponse = await axios.post(
         `${config.API_URL}/api/auth/login/initiate`,
@@ -166,7 +166,7 @@ function Login() {
       handleLogin();
     }
   };
-
+  
   const qrData = `${config.APP_URL}/mobile-verify/${sessionId}`;
 
   // Responsive QR size

@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 // frontend/src/components/Dashboard.jsx
 import React, { useEffect, useState } from "react";
@@ -12,7 +12,7 @@ const API_URL = config.API_URL;
 // Custom hook for responsive breakpoints
 function useMediaQuery(query) {
   const [matches, setMatches] = useState(
-    typeof window !== "undefined" ? window.matchMedia(query).matches : false
+    typeof window !== "undefined" ? window.matchMedia(query).matches : false,
   );
   useEffect(() => {
     const media = window.matchMedia(query);
@@ -74,60 +74,111 @@ function Dashboard() {
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     try {
-      return new Date(dateString).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-    } catch { return "Invalid Date"; }
+      return new Date(dateString).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    } catch {
+      return "Invalid Date";
+    }
   };
 
   const formatDateTime = (dateString) => {
     if (!dateString) return "First time login";
     try {
-      return new Date(dateString).toLocaleString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
-    } catch { return "Invalid Date"; }
+      return new Date(dateString).toLocaleString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "Invalid Date";
+    }
   };
 
   if (loading || loggingOut) return <AppLoader />;
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #0f1628 100%)',
-      padding: isMobile ? '20px 12px' : isTablet ? '28px 18px' : '40px 20px',
-      position: 'relative',
-      overflow: 'hidden'
-    }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        background:
+          "linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #0f1628 100%)",
+        padding: isMobile ? "20px 12px" : isTablet ? "28px 18px" : "40px 20px",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
       {/* Background orb */}
-      <div style={{
-        position: 'fixed', width: '400px', height: '400px', borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, transparent 70%)',
-        top: '-100px', right: '-100px', filter: 'blur(50px)',
-        animation: 'float 8s ease-in-out infinite', zIndex: 0, pointerEvents: 'none'
-      }}></div>
+      <div
+        style={{
+          position: "fixed",
+          width: "400px",
+          height: "400px",
+          borderRadius: "50%",
+          background:
+            "radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, transparent 70%)",
+          top: "-100px",
+          right: "-100px",
+          filter: "blur(50px)",
+          animation: "float 8s ease-in-out infinite",
+          zIndex: 0,
+          pointerEvents: "none",
+        }}
+      ></div>
 
       {/* Main Card */}
-      <div style={{
-        maxWidth: '1200px', margin: '0 auto',
-        background: 'linear-gradient(135deg, rgba(20, 24, 82, 0.8), rgba(30, 30, 70, 0.6))',
-        border: '1px solid rgba(139, 92, 246, 0.2)', borderRadius: '20px',
-        padding: isMobile ? '20px 16px' : isTablet ? '32px 24px' : '50px',
-        boxShadow: '0 20px 60px rgba(139, 92, 246, 0.2), 0 0 40px rgba(139, 92, 246, 0.1)',
-        backdropFilter: 'blur(20px)', position: 'relative', zIndex: 1
-      }}>
-
+      <div
+        style={{
+          maxWidth: "1200px",
+          margin: "0 auto",
+          background:
+            "linear-gradient(135deg, rgba(20, 24, 82, 0.8), rgba(30, 30, 70, 0.6))",
+          border: "1px solid rgba(139, 92, 246, 0.2)",
+          borderRadius: "20px",
+          padding: isMobile ? "20px 16px" : isTablet ? "32px 24px" : "50px",
+          boxShadow:
+            "0 20px 60px rgba(139, 92, 246, 0.2), 0 0 40px rgba(139, 92, 246, 0.1)",
+          backdropFilter: "blur(20px)",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
         {/* Header */}
-        <div style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          marginBottom: isMobile ? '24px' : '40px', flexWrap: 'wrap', gap: '12px',
-        }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: isMobile ? "24px" : "40px",
+            flexWrap: "wrap",
+            gap: "12px",
+          }}
+        >
           <div>
-            <p style={{
-              margin: '0 0 6px 0', color: '#b0b0c9', fontSize: '12px',
-              textTransform: 'uppercase', letterSpacing: '2px', fontWeight: '600'
-            }}>Welcome back</p>
-            <h1 style={{
-              color: '#ffffff', margin: 0,
-              fontSize: isMobile ? '24px' : isTablet ? '28px' : '36px',
-              fontWeight: '800'
-            }}>
+            <p
+              style={{
+                margin: "0 0 6px 0",
+                color: "#b0b0c9",
+                fontSize: "12px",
+                textTransform: "uppercase",
+                letterSpacing: "2px",
+                fontWeight: "600",
+              }}
+            >
+              Welcome back
+            </p>
+            <h1
+              style={{
+                color: "#ffffff",
+                margin: 0,
+                fontSize: isMobile ? "24px" : isTablet ? "28px" : "36px",
+                fontWeight: "800",
+              }}
+            >
               {userData?.name}
             </h1>
           </div>
@@ -135,57 +186,119 @@ function Dashboard() {
           <button
             onClick={handleLogout}
             style={{
-              padding: isMobile ? '10px 20px' : '12px 32px',
-              background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444',
-              border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '10px',
-              fontSize: '13px', fontWeight: '700', cursor: 'pointer',
-              transition: 'all 0.3s ease', display: 'flex', alignItems: 'center',
-              gap: '8px', textTransform: 'uppercase', letterSpacing: '1px'
+              padding: isMobile ? "10px 20px" : "12px 32px",
+              background: "rgba(239, 68, 68, 0.15)",
+              color: "#ef4444",
+              border: "1px solid rgba(239, 68, 68, 0.3)",
+              borderRadius: "10px",
+              fontSize: "13px",
+              fontWeight: "700",
+              cursor: "pointer",
+              transition: "all 0.3s ease",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              textTransform: "uppercase",
+              letterSpacing: "1px",
             }}
-            onMouseOver={(e) => { e.target.style.background = 'rgba(239, 68, 68, 0.25)'; e.target.style.transform = 'translateY(-2px)'; }}
-            onMouseOut={(e) => { e.target.style.background = 'rgba(239, 68, 68, 0.15)'; e.target.style.transform = 'translateY(0)'; }}
+            onMouseOver={(e) => {
+              e.target.style.background = "rgba(239, 68, 68, 0.25)";
+              e.target.style.transform = "translateY(-2px)";
+            }}
+            onMouseOut={(e) => {
+              e.target.style.background = "rgba(239, 68, 68, 0.15)";
+              e.target.style.transform = "translateY(0)";
+            }}
           >
             Sign Out
           </button>
         </div>
 
         {/* Account Details Card */}
-        <div style={{
-          background: 'rgba(0, 255, 255, 0.05)', padding: isMobile ? '18px 14px' : '30px',
-          borderRadius: '12px', marginBottom: '24px', border: '1px solid rgba(0, 255, 255, 0.15)',
-        }}>
-          <h3 style={{
-            color: '#00ffff', marginBottom: '18px', fontSize: isMobile ? '15px' : '18px',
-            fontWeight: '600', display: 'flex', alignItems: 'center', gap: '10px',
-            textTransform: 'uppercase', letterSpacing: '1px'
-          }}>
+        <div
+          style={{
+            background: "rgba(0, 255, 255, 0.05)",
+            padding: isMobile ? "18px 14px" : "30px",
+            borderRadius: "12px",
+            marginBottom: "24px",
+            border: "1px solid rgba(0, 255, 255, 0.15)",
+          }}
+        >
+          <h3
+            style={{
+              color: "#00ffff",
+              marginBottom: "18px",
+              fontSize: isMobile ? "15px" : "18px",
+              fontWeight: "600",
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              textTransform: "uppercase",
+              letterSpacing: "1px",
+            }}
+          >
             Account Details
           </h3>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: isMobile ? '10px' : '15px',
-          }}>
-            <InfoItem label="Name" value={userData?.name || 'N/A'} />
-            <InfoItem label="Email" value={userData?.email || 'N/A'} />
-            <InfoItem label="Member Since" value={formatDate(userData?.createdAt)} />
-            <InfoItem label="Last Login" value={formatDateTime(userData?.lastLogin)} />
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: isMobile
+                ? "1fr"
+                : isTablet
+                  ? "repeat(2, 1fr)"
+                  : "repeat(auto-fit, minmax(200px, 1fr))",
+              gap: isMobile ? "10px" : "15px",
+            }}
+          >
+            <InfoItem label="Name" value={userData?.name || "N/A"} />
+            <InfoItem label="Email" value={userData?.email || "N/A"} />
+            <InfoItem
+              label="Member Since"
+              value={formatDate(userData?.createdAt)}
+            />
+            <InfoItem
+              label="Last Login"
+              value={formatDateTime(userData?.lastLogin)}
+            />
           </div>
         </div>
 
         {/* Security Status */}
-        <div style={{
-          backgroundColor: "#e8f5e9", padding: isMobile ? '14px' : '20px',
-          borderRadius: "12px", border: "2px solid #81c784", marginBottom: "20px",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? '10px' : '12px' }}>
-            <span style={{ fontSize: isMobile ? '24px' : '32px' }}>🔐</span>
+        <div
+          style={{
+            backgroundColor: "#e8f5e9",
+            padding: isMobile ? "14px" : "20px",
+            borderRadius: "12px",
+            border: "2px solid #81c784",
+            marginBottom: "20px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: isMobile ? "10px" : "12px",
+            }}
+          >
+            <span style={{ fontSize: isMobile ? "24px" : "32px" }}>🔐</span>
             <div>
-              <h4 style={{ margin: "0 0 4px 0", color: "#2e7d32", fontSize: isMobile ? '15px' : '18px' }}>
+              <h4
+                style={{
+                  margin: "0 0 4px 0",
+                  color: "#2e7d32",
+                  fontSize: isMobile ? "15px" : "18px",
+                }}
+              >
                 Face Authentication Enabled
               </h4>
-              <p style={{ margin: 0, color: "#388e3c", fontSize: isMobile ? '12px' : '14px' }}>
+              <p
+                style={{
+                  margin: 0,
+                  color: "#388e3c",
+                  fontSize: isMobile ? "12px" : "14px",
+                }}
+              >
                 Your account is secured with AI-powered facial recognition
               </p>
             </div>
@@ -193,44 +306,88 @@ function Dashboard() {
         </div>
 
         {/* Quick Stats */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(auto-fit, minmax(160px, 1fr))',
-          gap: isMobile ? '8px' : '20px',
-          marginBottom: '24px',
-        }}>
-          <StatCard title="Security Level" value="Maximum" isMobile={isMobile} />
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: isMobile
+              ? "repeat(3, 1fr)"
+              : "repeat(auto-fit, minmax(160px, 1fr))",
+            gap: isMobile ? "8px" : "20px",
+            marginBottom: "24px",
+          }}
+        >
+          <StatCard
+            title="Security Level"
+            value="Maximum"
+            isMobile={isMobile}
+          />
           <StatCard title="Account Status" value="Active" isMobile={isMobile} />
           <StatCard title="Auth Method" value="Face ID" isMobile={isMobile} />
         </div>
 
         {/* Quick Actions */}
-        <div style={{
-          background: 'rgba(0, 200, 200, 0.08)', padding: isMobile ? '16px 14px' : '25px',
-          borderRadius: '12px', border: '1px solid rgba(0, 200, 200, 0.2)',
-        }}>
-          <h4 style={{
-            margin: '0 0 14px 0', color: '#00ffff',
-            fontSize: isMobile ? '13px' : '16px', fontWeight: '600',
-            textTransform: 'uppercase', letterSpacing: '1px'
-          }}>
+        <div
+          style={{
+            background: "rgba(0, 200, 200, 0.08)",
+            padding: isMobile ? "16px 14px" : "25px",
+            borderRadius: "12px",
+            border: "1px solid rgba(0, 200, 200, 0.2)",
+          }}
+        >
+          <h4
+            style={{
+              margin: "0 0 14px 0",
+              color: "#00ffff",
+              fontSize: isMobile ? "13px" : "16px",
+              fontWeight: "600",
+              textTransform: "uppercase",
+              letterSpacing: "1px",
+            }}
+          >
             Quick Actions
           </h4>
-          <div style={{ display: 'flex', gap: isMobile ? '8px' : '10px', flexWrap: 'wrap' }}>
-            <ActionButton label="Update Face" onClick={() => alert("Coming Soon!")} isMobile={isMobile} />
-            <ActionButton label="Change Password" onClick={() => navigate("/change-password")} isMobile={isMobile} />
-            <ActionButton label="View Activity" onClick={() => alert("Coming Soon!")} isMobile={isMobile} />
+          <div
+            style={{
+              display: "flex",
+              gap: isMobile ? "8px" : "10px",
+              flexWrap: "wrap",
+            }}
+          >
+            <ActionButton
+              label="Update Face"
+              // onClick={() => alert("Coming Soon!")}
+              onClick={() => navigate("/update-face")}
+              isMobile={isMobile}
+            />
+            <ActionButton
+              label="Change Password"
+              onClick={() => navigate("/change-password")}
+              isMobile={isMobile}
+            />
+            <ActionButton
+              label="View Activity"
+              onClick={() => alert("Coming Soon!")}
+              isMobile={isMobile}
+            />
           </div>
         </div>
 
         {/* Footer Note */}
-        <div style={{
-          marginTop: '24px', padding: isMobile ? '14px' : '20px',
-          background: 'rgba(0, 255, 255, 0.05)', border: '1px solid rgba(0, 255, 255, 0.1)',
-          borderRadius: '10px', textAlign: 'center', color: '#909090',
-          fontSize: isMobile ? '12px' : '13px',
-        }}>
-          <p style={{ margin: 0 }}>✓ Your biometric data is encrypted end-to-end and never shared</p>
+        <div
+          style={{
+            marginTop: "24px",
+            padding: isMobile ? "14px" : "20px",
+            background: "rgba(0, 255, 255, 0.05)",
+            border: "1px solid rgba(0, 255, 255, 0.1)",
+            borderRadius: "10px",
+            textAlign: "center",
+            color: "#909090",
+            fontSize: isMobile ? "12px" : "13px",
+          }}
+        >
+          <p style={{ margin: 0 }}>
+            ✓ Your biometric data is encrypted end-to-end and never shared
+          </p>
         </div>
       </div>
 
@@ -247,14 +404,34 @@ function Dashboard() {
 // ─── Helper Components ───────────────────────────────────────
 function InfoItem({ label, value }) {
   return (
-    <div style={{
-      padding: '12px', background: 'rgba(0, 255, 255, 0.08)',
-      borderRadius: '8px', border: '1px solid rgba(0, 255, 255, 0.15)',
-    }}>
-      <div style={{ fontSize: '10px', color: '#909090', marginBottom: '6px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px' }}>
+    <div
+      style={{
+        padding: "12px",
+        background: "rgba(0, 255, 255, 0.08)",
+        borderRadius: "8px",
+        border: "1px solid rgba(0, 255, 255, 0.15)",
+      }}
+    >
+      <div
+        style={{
+          fontSize: "10px",
+          color: "#909090",
+          marginBottom: "6px",
+          fontWeight: "600",
+          textTransform: "uppercase",
+          letterSpacing: "1px",
+        }}
+      >
         {label}
       </div>
-      <div style={{ fontSize: '14px', color: '#ffffff', fontWeight: '600', wordBreak: 'break-word' }}>
+      <div
+        style={{
+          fontSize: "14px",
+          color: "#ffffff",
+          fontWeight: "600",
+          wordBreak: "break-word",
+        }}
+      >
         {value}
       </div>
     </div>
@@ -265,17 +442,40 @@ function StatCard({ title, value, isMobile }) {
   return (
     <div
       style={{
-        padding: isMobile ? '12px 6px' : '20px',
-        background: 'rgba(0, 255, 255, 0.08)', borderRadius: '12px',
-        border: '1px solid rgba(0, 255, 255, 0.15)', textAlign: 'center', transition: 'all 0.3s',
+        padding: isMobile ? "12px 6px" : "20px",
+        background: "rgba(0, 255, 255, 0.08)",
+        borderRadius: "12px",
+        border: "1px solid rgba(0, 255, 255, 0.15)",
+        textAlign: "center",
+        transition: "all 0.3s",
       }}
-      onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(0, 255, 255, 0.15)'; e.currentTarget.style.transform = 'translateY(-3px)'; }}
-      onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(0, 255, 255, 0.08)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+      onMouseOver={(e) => {
+        e.currentTarget.style.background = "rgba(0, 255, 255, 0.15)";
+        e.currentTarget.style.transform = "translateY(-3px)";
+      }}
+      onMouseOut={(e) => {
+        e.currentTarget.style.background = "rgba(0, 255, 255, 0.08)";
+        e.currentTarget.style.transform = "translateY(0)";
+      }}
     >
-      <div style={{ fontSize: isMobile ? '9px' : '12px', color: '#909090', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+      <div
+        style={{
+          fontSize: isMobile ? "9px" : "12px",
+          color: "#909090",
+          marginBottom: "8px",
+          textTransform: "uppercase",
+          letterSpacing: "0.5px",
+        }}
+      >
         {title}
       </div>
-      <div style={{ fontSize: isMobile ? '15px' : '20px', fontWeight: 'bold', color: '#00ffff' }}>
+      <div
+        style={{
+          fontSize: isMobile ? "15px" : "20px",
+          fontWeight: "bold",
+          color: "#00ffff",
+        }}
+      >
         {value}
       </div>
     </div>
@@ -287,15 +487,27 @@ function ActionButton({ label, onClick, isMobile }) {
     <button
       onClick={onClick}
       style={{
-        padding: isMobile ? '10px 14px' : '12px 20px',
-        background: 'rgba(0, 255, 255, 0.1)', color: '#00ffff',
-        border: '1px solid rgba(0, 255, 255, 0.3)', borderRadius: '8px',
-        fontSize: isMobile ? '12px' : '13px', fontWeight: '600', cursor: 'pointer',
-        transition: 'all 0.3s', textTransform: 'uppercase', letterSpacing: '0.5px',
-        flex: isMobile ? '1 1 0' : 'none',
+        padding: isMobile ? "10px 14px" : "12px 20px",
+        background: "rgba(0, 255, 255, 0.1)",
+        color: "#00ffff",
+        border: "1px solid rgba(0, 255, 255, 0.3)",
+        borderRadius: "8px",
+        fontSize: isMobile ? "12px" : "13px",
+        fontWeight: "600",
+        cursor: "pointer",
+        transition: "all 0.3s",
+        textTransform: "uppercase",
+        letterSpacing: "0.5px",
+        flex: isMobile ? "1 1 0" : "none",
       }}
-      onMouseOver={(e) => { e.target.style.background = 'rgba(0, 255, 255, 0.2)'; e.target.style.transform = 'translateY(-2px)'; }}
-      onMouseOut={(e) => { e.target.style.background = 'rgba(0, 255, 255, 0.1)'; e.target.style.transform = 'translateY(0)'; }}
+      onMouseOver={(e) => {
+        e.target.style.background = "rgba(0, 255, 255, 0.2)";
+        e.target.style.transform = "translateY(-2px)";
+      }}
+      onMouseOut={(e) => {
+        e.target.style.background = "rgba(0, 255, 255, 0.1)";
+        e.target.style.transform = "translateY(0)";
+      }}
     >
       {label}
     </button>

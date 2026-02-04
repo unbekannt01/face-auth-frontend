@@ -1,8 +1,8 @@
-/* eslint-disable no-unused-vars */
 "use client";
 
+/* eslint-disable no-unused-vars */
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { QRCodeSVG } from "qrcode.react";
@@ -29,64 +29,82 @@ function useMediaQuery(query) {
 
 function UpdateFaceData() {
   const navigate = useNavigate();
-  const [sessionId, setSessionId] = useState(uuidv4());
+  const [sessionId] = useState(uuidv4());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [status, setStatus] = useState("Generating QR code...");
+  const [status, setStatus] = useState("");
   const [showQR, setShowQR] = useState(false);
-  const [verifying, setVerifying] = useState(false);
-  const qrRef = useRef(null);
 
-  // Responsive breakpoints
   const isMobile = useMediaQuery("(max-width: 480px)");
   const isTablet = useMediaQuery("(max-width: 768px)");
 
   useEffect(() => {
-    // Check if user is logged in
     const token = localStorage.getItem("authToken");
     if (!token) {
       navigate("/login");
       return;
     }
 
-    // Initialize socket
     if (!socket) {
       socket = io(config.API_URL);
 
       socket.on("face-verification-complete", (data) => {
         console.log("[UpdateFace] Verification complete:", data);
-        if (data.success) {
-          setSuccess("✅ Face updated successfully!");
-          setVerifying(false);
-          setTimeout(() => {
-            navigate("/dashboard");
-          }, 2000);
-        } else {
-          setError("❌ " + (data.message || "Face update failed"));
-          setVerifying(false);
+
+        if (data.sessionId === sessionId) {
+          if (data.success) {
+            setSuccess("✅ Face updated successfully!");
+            setIsLoading(false);
+
+            setTimeout(() => {
+              navigate("/dashboard");
+            }, 2000);
+          } else {
+            setError("❌ " + (data.message || "Face update failed"));
+            setIsLoading(false);
+          }
         }
       });
     }
 
     initiateUpdate();
+
     return () => {
       if (socket) {
-        socket.disconnect();
+        socket.off("face-verification-complete");
       }
     };
-  }, [navigate]);
+  }, [navigate, sessionId]);
 
   const initiateUpdate = async () => {
     try {
       setIsLoading(true);
       setError("");
-      setStatus("Generating QR code...");
+      setStatus("Preparing face update...");
 
       const token = localStorage.getItem("authToken");
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
 
-      // Call backend to initiate face update
-      const response = await axios.post(
+      console.log("[UpdateFace] Starting for user:", user.email);
+
+      const sessionResponse = await axios.post(
+        `${config.API_URL}/api/session/create`,
+        {
+          sessionId,
+          email: user.email,
+          password: "",
+          type: "update-face",
+        },
+      );
+
+      if (!sessionResponse.data.success) {
+        throw new Error("Failed to create session");
+      }
+
+      console.log("[UpdateFace] ✓ Session created:", sessionId);
+
+      const initiateResponse = await axios.post(
         `${config.API_URL}/api/auth/update-face/initiate`,
         {},
         {
@@ -96,33 +114,27 @@ function UpdateFaceData() {
         },
       );
 
-      if (response.data.success) {
-        console.log("[UpdateFace] Session created:", sessionId);
-
-        // Create session on server to store user data for mobile
-        try {
-          await axios.post(`${config.API_URL}/api/session/create`, {
-            sessionId,
-            email: "update-face",
-            password: "",
-            type: "update-face",
-          });
-          console.log("[UpdateFace] Session stored on server");
-        } catch (sessionErr) {
-          console.error("[UpdateFace] Session store error:", sessionErr);
-        }
+      if (initiateResponse.data.success) {
+        console.log("[UpdateFace] ✓ QR Auth session created");
 
         setShowQR(true);
         setStatus("📱 Scan QR code with your mobile device");
         setIsLoading(false);
+
+        socket.emit("qr-generated", {
+          sessionId,
+          type: "update-face",
+          email: user.email,
+        });
       } else {
-        setError("❌ Failed to initiate face update");
-        setIsLoading(false);
+        throw new Error("Failed to initiate face update");
       }
     } catch (err) {
       console.error("[UpdateFace] Error:", err);
       const errorMsg =
-        err.response?.data?.message || "Failed to initiate face update";
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to initiate face update";
       setError("❌ " + errorMsg);
       setIsLoading(false);
     }
@@ -134,6 +146,12 @@ function UpdateFaceData() {
 
   const qrSize = isMobile ? 200 : isTablet ? 220 : 256;
 
+  const qrData = JSON.stringify({
+    sessionId,
+    type: "update-face",
+    url: `${config.APP_URL}/mobile-update-face/${sessionId}`,
+  });
+
   return (
     <div style={styles.container}>
       <div
@@ -144,7 +162,6 @@ function UpdateFaceData() {
           margin: isMobile ? "0 16px" : "0",
         }}
       >
-        {/* Header */}
         <div
           style={{
             ...styles.header,
@@ -182,7 +199,6 @@ function UpdateFaceData() {
           Update your biometric authentication with a new face scan
         </p>
 
-        {/* QR Code Section */}
         {showQR && !isLoading && (
           <div
             style={{
@@ -190,28 +206,6 @@ function UpdateFaceData() {
               marginBottom: isMobile ? "20px" : "25px",
             }}
           >
-            <div
-              style={{
-                ...styles.qrBox,
-                padding: isMobile ? "12px" : "15px",
-              }}
-            >
-              <QRCodeSVG
-                value={`${config.APP_URL}/mobile-update-face/${sessionId}`}
-                size={qrSize}
-                level="H"
-                includeMargin={true}
-              />
-            </div>
-            <p
-              style={{
-                ...styles.qrHint,
-                fontSize: isMobile ? "13px" : "14px",
-              }}
-            >
-              Scan with your mobile device
-            </p>
-
             <div
               style={{
                 ...styles.manualLinkBox,
@@ -226,6 +220,7 @@ function UpdateFaceData() {
               >
                 Or click to open directly:
               </p>
+
               <a
                 href={`${config.APP_URL}/mobile-update-face/${sessionId}`}
                 target="_blank"
@@ -242,7 +237,6 @@ function UpdateFaceData() {
           </div>
         )}
 
-        {/* Loading State */}
         {isLoading && (
           <div
             style={{
@@ -263,39 +257,11 @@ function UpdateFaceData() {
                 fontSize: isMobile ? "14px" : "16px",
               }}
             >
-              Generating QR code...
+              {status || "Processing..."}
             </p>
           </div>
         )}
 
-        {/* Verification State */}
-        {verifying && (
-          <div
-            style={{
-              ...styles.verifyingContainer,
-              padding: isMobile ? "30px 15px" : "40px 20px",
-              marginBottom: isMobile ? "15px" : "20px",
-            }}
-          >
-            <div
-              style={{
-                ...styles.spinner,
-                width: isMobile ? "40px" : "50px",
-                height: isMobile ? "40px" : "50px",
-              }}
-            ></div>
-            <p
-              style={{
-                ...styles.verifyingText,
-                fontSize: isMobile ? "14px" : "16px",
-              }}
-            >
-              Verifying face...
-            </p>
-          </div>
-        )}
-
-        {/* Status Messages */}
         <div
           style={{
             ...styles.statusContainer,
@@ -324,7 +290,7 @@ function UpdateFaceData() {
               {success}
             </p>
           )}
-          {!error && !success && showQR && (
+          {!error && !success && status && showQR && (
             <p
               style={{
                 ...styles.statusText,
@@ -337,7 +303,6 @@ function UpdateFaceData() {
           )}
         </div>
 
-        {/* Instructions */}
         <div
           style={{
             ...styles.instructions,
@@ -364,12 +329,11 @@ function UpdateFaceData() {
             <li>Scan the QR code with your mobile device</li>
             <li>Position your face in good lighting</li>
             <li>Ensure blue dots appear on your face</li>
-            <li>Tap "Capture Face" when prompted</li>
+            <li>Tap &quot;Capture Face&quot; when prompted</li>
             <li>Wait for verification to complete</li>
           </ol>
         </div>
 
-        {/* Warning */}
         <div
           style={{
             ...styles.warningBox,
@@ -385,7 +349,7 @@ function UpdateFaceData() {
             }}
           >
             <strong>Important:</strong> This will replace your current biometric
-            data. Ensure you're in good lighting and your face is clearly
+            data. Ensure you&apos;re in good lighting and your face is clearly
             visible.
           </p>
         </div>
@@ -489,19 +453,6 @@ const styles = {
     color: "#b0b0c9",
     fontWeight: "600",
   },
-  verifyingContainer: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    background: "rgba(0, 212, 255, 0.08)",
-    borderRadius: "12px",
-  },
-  verifyingText: {
-    marginTop: "15px",
-    color: "#00d4ff",
-    fontWeight: "600",
-  },
   spinner: {
     border: "4px solid rgba(0, 212, 255, 0.2)",
     borderTop: "4px solid #00d4ff",
@@ -570,7 +521,6 @@ const styles = {
   },
 };
 
-// Add animation
 const styleSheet = document.createElement("style");
 styleSheet.innerText = `
   @keyframes spin {
