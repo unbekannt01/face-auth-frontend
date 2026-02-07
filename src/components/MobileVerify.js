@@ -103,7 +103,7 @@ function MobileVerify() {
       console.log("[MODELS] Loading...");
 
       const MODEL_URL =
-        "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model";
+        "https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights";
 
       await Promise.all([
         faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
@@ -115,7 +115,7 @@ function MobileVerify() {
       setModelsLoaded(true);
       startCamera();
     } catch (error) {
-      console.error("[MODELS] Failed:", error);
+      console.error("[MODELS] Failed:", error.message || error);
       setStatus("✗ Failed to load AI");
     }
   };
