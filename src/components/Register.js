@@ -18,12 +18,12 @@ function Register() {
     password: "",
     confirmPassword: "",
   });
-  const [sessionId, setSessionId] = useState("");
+  const [, setSessionId] = useState("");
   const [qrUrl, setQrUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState(300); // 5 minutes
-  const [capturedFace, setCapturedFace] = useState(null);
+  const [, setCapturedFace] = useState(null);
 
   // Responsive
   const [isMobile, setIsMobile] = useState(false);

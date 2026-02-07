@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -16,7 +15,7 @@ function Login() {
   const [step, setStep] = useState("email"); // email, qr, verifying, success
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [sessionId, setSessionId] = useState("");
+  const [, setSessionId] = useState("");
   const [qrUrl, setQrUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
