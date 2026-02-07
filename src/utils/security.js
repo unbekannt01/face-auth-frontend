@@ -1,7 +1,10 @@
+/* eslint-disable import/no-anonymous-default-export */
+/* eslint-disable no-restricted-globals */
 // frontend/src/utils/security.js
 // FRONTEND SECURITY - ANTI-DEBUGGING & API PROTECTION
 
 import crypto from "crypto-js";
+import { config } from "../config";
 
 // ═══════════════════════════════════════════════════════════
 // CONSOLE PROTECTION (Disable in Production)
@@ -113,7 +116,7 @@ export class ConsoleProtection {
 // API REQUEST ENCRYPTION
 // ═══════════════════════════════════════════════════════════
 
-const API_SECRET = process.env.REACT_APP_API_SECRET || "your-secret-key";
+const API_SECRET = config.API_SECRET;
 
 export class SecureAPI {
   // Generate HMAC signature
@@ -176,7 +179,8 @@ export class SecureAPI {
 
 export class SecureStorage {
   static ENCRYPTION_KEY =
-    process.env.REACT_APP_STORAGE_KEY || "default-key-change-this";
+    // process.env.REACT_APP_STORAGE_KEY || "default-key-change-this";
+    config.ENCRYPTION_KEY;
 
   // Encrypt and store
   static setItem(key, value) {
