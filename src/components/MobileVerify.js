@@ -10,24 +10,27 @@ import axios from "axios";
 import { config } from "../config";
 
 /* ================================
-   ⚡ AI MODELS GLOBAL PRELOADER
-   Loads models ONCE for entire app
+   ⚡ GLOBAL MODEL PRELOADER
+   Models load ONCE for entire app
 ================================ */
 let modelsLoaded = false;
 let modelsLoading = false;
-const modelLoadPromise = {
+let modelLoadError = null;
+
+// Promise-based loader
+const modelLoader = {
   promise: null,
   resolve: null,
   reject: null,
 };
 
 // Initialize promise
-modelLoadPromise.promise = new Promise((resolve, reject) => {
-  modelLoadPromise.resolve = resolve;
-  modelLoadPromise.reject = reject;
+modelLoader.promise = new Promise((resolve, reject) => {
+  modelLoader.resolve = resolve;
+  modelLoader.reject = reject;
 });
 
-// ⚡ PRELOAD FUNCTION
+// ⚡ PRELOAD FUNCTION with MULTIPLE CDN FALLBACKS
 const preloadModels = async () => {
   if (modelsLoaded) {
     console.log("[MODELS] ✅ Already loaded (cached)");
@@ -36,62 +39,63 @@ const preloadModels = async () => {
 
   if (modelsLoading) {
     console.log("[MODELS] ⏳ Loading in progress, waiting...");
-    return modelLoadPromise.promise;
+    return modelLoader.promise;
   }
 
   modelsLoading = true;
   console.log("[MODELS] 🚀 Starting preload...");
 
-  try {
-    // Try multiple CDN sources with timeout
-    const MODEL_URLS = [
-      "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model",
-      "https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model",
-      "https://justadudewhohacks.github.io/face-api.js/models",
-    ];
+  // Multiple CDN sources (try in order)
+  const MODEL_URLS = [
+    "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model",
+    "https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model",
+    "https://justadudewhohacks.github.io/face-api.js/models",
+    "/models", // Local fallback (if you host models yourself)
+  ];
 
-    let loadSuccess = false;
-    let lastError = null;
+  let loadSuccess = false;
+  let lastError = null;
 
-    for (const MODEL_URL of MODEL_URLS) {
-      try {
-        console.log(`[MODELS] Trying: ${MODEL_URL}`);
+  for (const MODEL_URL of MODEL_URLS) {
+    try {
+      console.log(`[MODELS] 🔄 Trying: ${MODEL_URL}`);
 
-        // Load with 10s timeout per CDN
-        const loadPromise = Promise.all([
-          faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-        ]);
+      // Load with 15s timeout per CDN
+      const loadPromise = Promise.all([
+        faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+      ]);
 
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Timeout")), 10000),
-        );
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Timeout after 15s")), 15000),
+      );
 
-        await Promise.race([loadPromise, timeoutPromise]);
+      await Promise.race([loadPromise, timeoutPromise]);
 
-        console.log(`[MODELS] ✅ LOADED from ${MODEL_URL}`);
-        loadSuccess = true;
-        break;
-      } catch (err) {
-        console.warn(`[MODELS] Failed from ${MODEL_URL}:`, err.message);
-        lastError = err;
-      }
+      console.log(`[MODELS] ✅ SUCCESS from ${MODEL_URL}`);
+      loadSuccess = true;
+      break;
+    } catch (err) {
+      console.warn(`[MODELS] ❌ Failed from ${MODEL_URL}:`, err.message);
+      lastError = err;
     }
+  }
 
-    if (!loadSuccess) {
-      throw lastError || new Error("All CDN sources failed");
-    }
-
-    modelsLoaded = true;
-    console.log("[MODELS] ✅ Preload complete!");
-    modelLoadPromise.resolve(true);
-    return true;
-  } catch (error) {
+  if (!loadSuccess) {
+    const error = lastError || new Error("All CDN sources failed");
     console.error("[MODELS] ❌ All sources failed:", error);
-    modelLoadPromise.reject(error);
+    modelLoadError = error;
+    modelLoader.reject(error);
+    modelsLoading = false;
     throw error;
   }
+
+  modelsLoaded = true;
+  modelLoadError = null;
+  console.log("[MODELS] ✅ Preload complete!");
+  modelLoader.resolve(true);
+  return true;
 };
 
 // ⚡ START PRELOADING IMMEDIATELY (when file loads)
@@ -139,6 +143,7 @@ function MobileVerify() {
   const [currentDetection, setCurrentDetection] = useState(null);
   const [loadError, setLoadError] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [retryCount, setRetryCount] = useState(0);
 
   const isMobile = useMediaQuery("(max-width: 480px)");
   const isTablet = useMediaQuery("(max-width: 768px)");
@@ -175,22 +180,39 @@ function MobileVerify() {
   };
 
   /* ================================
-     ⚡ OPTIMIZED: Parallel Init
+     ⚡ OPTIMIZED: Wait for models FIRST
   ================================ */
   const initialize = useCallback(async () => {
     try {
       console.log("[INIT] 🚀 Starting...");
-      setStatus("✨ Loading session...");
+      setStatus("✨ Loading AI models...");
       setProgress(10);
+      setLoadError(false);
 
-      // ⚡ PARALLEL: Session fetch + Model wait
-      const [sessionResponse] = await Promise.all([
-        axios.get(`${config.API_URL}/api/auth/session/${sessionId}`),
-        modelLoadPromise.promise, // Wait for preloaded models
-      ]);
+      // ⚡ STEP 1: WAIT for models (with progress updates)
+      try {
+        // Show progress while loading
+        const progressInterval = setInterval(() => {
+          setProgress((prev) => Math.min(prev + 5, 40));
+        }, 300);
 
-      console.log("[INIT] ✅ Session loaded");
-      setProgress(40);
+        await modelLoader.promise;
+        clearInterval(progressInterval);
+
+        console.log("[INIT] ✅ Models ready");
+        setProgress(50);
+      } catch (modelError) {
+        setLoadError(true);
+        setStatus("❌ Failed to load AI models");
+        setProgress(0);
+        throw modelError;
+      }
+
+      // ⚡ STEP 2: Load session data
+      setStatus("✨ Loading session...");
+      const sessionResponse = await axios.get(
+        `${config.API_URL}/api/auth/session/${sessionId}`,
+      );
 
       if (!sessionResponse.data.success) {
         throw new Error("Session expired or invalid");
@@ -202,10 +224,10 @@ function MobileVerify() {
       };
       setSessionData(session);
 
-      console.log("[INIT] 📋 Session type:", session.type);
-      setProgress(60);
+      console.log("[INIT] ✅ Session loaded");
+      setProgress(70);
 
-      // ⚡ Start camera immediately
+      // ⚡ STEP 3: Start camera
       console.log("[INIT] 📷 Starting camera...");
       setStatus("✨ Starting camera...");
 
@@ -218,7 +240,7 @@ function MobileVerify() {
       });
 
       console.log("[INIT] ✅ Camera started");
-      setProgress(80);
+      setProgress(85);
       streamRef.current = stream;
 
       if (!videoRef.current) return;
@@ -243,8 +265,8 @@ function MobileVerify() {
         await videoRef.current.play();
         console.log("[INIT] ✅ Video playing");
 
-        // Small delay for stability
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        // Wait a bit for video to stabilize
+        await new Promise((resolve) => setTimeout(resolve, 1500));
 
         setProgress(100);
         setVideoReady(true);
@@ -257,6 +279,7 @@ function MobileVerify() {
       console.error("[INIT] ❌ Error:", error);
       setLoadError(true);
       setStatus("❌ Initialization failed");
+      setProgress(0);
 
       if (error.message.includes("Session")) {
         setTimeout(() => {
@@ -268,15 +291,43 @@ function MobileVerify() {
   }, [sessionId, facingMode, navigate]);
 
   const handleRetry = () => {
+    console.log("[RETRY] Attempting retry...", retryCount + 1);
+    setRetryCount(retryCount + 1);
     setLoadError(false);
     setProgress(0);
     setStatus("✨ Retrying...");
-    initialize();
+
+    // Reset model loading state for retry
+    modelsLoading = false;
+    modelLoadError = null;
+
+    // Create new promise
+    modelLoader.promise = new Promise((resolve, reject) => {
+      modelLoader.resolve = resolve;
+      modelLoader.reject = reject;
+    });
+
+    // Try loading again
+    preloadModels()
+      .then(() => {
+        initialize();
+      })
+      .catch((err) => {
+        console.error("[RETRY] Failed:", err);
+        setLoadError(true);
+        setStatus("❌ Retry failed. Check your internet connection.");
+      });
   };
 
   const startDetection = () => {
     if (isDetectingRef.current) {
       console.log("[DETECTION] ✓ Already running");
+      return;
+    }
+
+    if (!modelsLoaded) {
+      console.log("[DETECTION] ⚠️ Models not loaded yet, waiting...");
+      setTimeout(startDetection, 500);
       return;
     }
 
@@ -568,28 +619,61 @@ function MobileVerify() {
               >
                 {status}
               </p>
+              <p
+                style={{
+                  ...styles.overlaySubtext,
+                  fontSize: isMobile ? "11px" : "12px",
+                }}
+              >
+                {progress < 50
+                  ? "Loading AI models..."
+                  : progress < 70
+                    ? "Verifying session..."
+                    : progress < 90
+                      ? "Starting camera..."
+                      : "Almost ready..."}
+              </p>
             </div>
           )}
 
           {/* Error Overlay */}
           {loadError && (
             <div style={styles.overlay}>
-              <div style={{ textAlign: "center", color: "#fff" }}>
-                <p style={{ fontSize: "18px", marginBottom: "20px" }}>❌</p>
-                <p style={{ fontSize: "14px", marginBottom: "20px" }}>
-                  {status}
-                </p>
-                <button onClick={handleRetry} style={styles.retryBtn}>
-                  🔄 Retry
-                </button>
+              <div
+                style={{ textAlign: "center", color: "#fff", padding: "20px" }}
+              >
+                <p style={{ fontSize: "28px", marginBottom: "15px" }}>❌</p>
                 <p
                   style={{
-                    fontSize: "12px",
-                    marginTop: "15px",
+                    fontSize: "16px",
+                    marginBottom: "10px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {status}
+                </p>
+                <p
+                  style={{
+                    fontSize: "13px",
+                    marginBottom: "20px",
                     color: "#b0b0c9",
                   }}
                 >
-                  Check your internet connection
+                  {modelLoadError
+                    ? "AI models failed to load"
+                    : "Check your internet connection"}
+                </p>
+                <button onClick={handleRetry} style={styles.retryBtn}>
+                  🔄 Retry {retryCount > 0 ? `(Attempt ${retryCount + 1})` : ""}
+                </button>
+                <p
+                  style={{
+                    fontSize: "11px",
+                    marginTop: "15px",
+                    color: "#6c757d",
+                  }}
+                >
+                  💡 Ensure stable internet connection
                 </p>
               </div>
             </div>
@@ -688,7 +772,7 @@ function MobileVerify() {
           >
             <li>Face camera directly</li>
             <li>Good lighting needed</li>
-            <li>Models preload automatically</li>
+            <li>Wait for AI models to load</li>
             <li>Blue dots = landmarks detected</li>
           </ul>
         </div>
@@ -787,7 +871,7 @@ const styles = {
     left: 0,
     width: "100%",
     height: "100%",
-    background: "rgba(0,0,0,0.7)",
+    background: "rgba(0,0,0,0.85)",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
@@ -797,6 +881,11 @@ const styles = {
     color: "#00d4ff",
     fontWeight: "600",
     marginTop: "15px",
+  },
+  overlaySubtext: {
+    color: "#b0b0c9",
+    marginTop: "8px",
+    fontWeight: "500",
   },
   spinner: {
     border: "4px solid rgba(0, 212, 255, 0.2)",
