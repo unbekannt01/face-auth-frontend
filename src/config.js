@@ -1,4 +1,3 @@
-// src/config.js
 
 export const config = {
   // Single place to control everything

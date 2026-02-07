@@ -1,3 +1,5 @@
+/* eslint-disable import/no-anonymous-default-export */
+/* eslint-disable no-restricted-globals */
 // frontend/src/utils/security.js
 // FRONTEND SECURITY - ANTI-DEBUGGING & API PROTECTION
 
