@@ -11,94 +11,61 @@ import { config } from "../config";
 
 /* ================================
    ⚡ GLOBAL MODEL PRELOADER
-   Models load ONCE for entire app
+   Using LOCAL models from /models
 ================================ */
 let modelsLoaded = false;
 let modelsLoading = false;
 let modelLoadError = null;
 
-// Promise-based loader
 const modelLoader = {
   promise: null,
   resolve: null,
   reject: null,
 };
 
-// Initialize promise
 modelLoader.promise = new Promise((resolve, reject) => {
   modelLoader.resolve = resolve;
   modelLoader.reject = reject;
 });
 
-// ⚡ PRELOAD FUNCTION with MULTIPLE CDN FALLBACKS
+// ⚡ PRELOAD FUNCTION - LOCAL FIRST!
 const preloadModels = async () => {
   if (modelsLoaded) {
-    console.log("[MODELS] ✅ Already loaded (cached)");
+    console.log("[MODELS] ✅ Already loaded");
     return true;
   }
 
   if (modelsLoading) {
-    console.log("[MODELS] ⏳ Loading in progress, waiting...");
+    console.log("[MODELS] ⏳ Loading in progress...");
     return modelLoader.promise;
   }
 
   modelsLoading = true;
-  console.log("[MODELS] 🚀 Starting preload...");
+  console.log("[MODELS] 🚀 Loading from LOCAL...");
 
-  // Multiple CDN sources (try in order)
-  const MODEL_URLS = [
-    "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model",
-    "https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model",
-    "https://justadudewhohacks.github.io/face-api.js/models",
-    "/models", // Local fallback (if you host models yourself)
-  ];
+  try {
+    // DIRECT LOCAL LOADING (fastest & most reliable)
+    await Promise.all([
+      faceapi.nets.ssdMobilenetv1.loadFromUri("/models"),
+      faceapi.nets.faceLandmark68Net.loadFromUri("/models"),
+      faceapi.nets.faceRecognitionNet.loadFromUri("/models"),
+    ]);
 
-  let loadSuccess = false;
-  let lastError = null;
-
-  for (const MODEL_URL of MODEL_URLS) {
-    try {
-      console.log(`[MODELS] 🔄 Trying: ${MODEL_URL}`);
-
-      // Load with 15s timeout per CDN
-      const loadPromise = Promise.all([
-        faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-      ]);
-
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Timeout after 15s")), 15000),
-      );
-
-      await Promise.race([loadPromise, timeoutPromise]);
-
-      console.log(`[MODELS] ✅ SUCCESS from ${MODEL_URL}`);
-      loadSuccess = true;
-      break;
-    } catch (err) {
-      console.warn(`[MODELS] ❌ Failed from ${MODEL_URL}:`, err.message);
-      lastError = err;
-    }
-  }
-
-  if (!loadSuccess) {
-    const error = lastError || new Error("All CDN sources failed");
-    console.error("[MODELS] ❌ All sources failed:", error);
+    console.log("[MODELS] ✅ Loaded from LOCAL /models");
+    modelsLoaded = true;
+    modelLoadError = null;
+    modelLoader.resolve(true);
+    return true;
+  } catch (error) {
+    console.error("[MODELS] ❌ Failed:", error);
     modelLoadError = error;
     modelLoader.reject(error);
     modelsLoading = false;
     throw error;
   }
-
-  modelsLoaded = true;
-  modelLoadError = null;
-  console.log("[MODELS] ✅ Preload complete!");
-  modelLoader.resolve(true);
-  return true;
 };
 
-// ⚡ START PRELOADING IMMEDIATELY (when file loads)
+// ⚡ START PRELOADING
 preloadModels().catch((err) => {
   console.error("[MODELS] Preload error:", err);
 });
@@ -143,7 +110,6 @@ function MobileVerify() {
   const [currentDetection, setCurrentDetection] = useState(null);
   const [loadError, setLoadError] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [retryCount, setRetryCount] = useState(0);
 
   const isMobile = useMediaQuery("(max-width: 480px)");
   const isTablet = useMediaQuery("(max-width: 768px)");
@@ -179,9 +145,6 @@ function MobileVerify() {
     videoReadyFiredRef.current = false;
   };
 
-  /* ================================
-     ⚡ OPTIMIZED: Wait for models FIRST
-  ================================ */
   const initialize = useCallback(async () => {
     try {
       console.log("[INIT] 🚀 Starting...");
@@ -189,12 +152,11 @@ function MobileVerify() {
       setProgress(10);
       setLoadError(false);
 
-      // ⚡ STEP 1: WAIT for models (with progress updates)
+      // STEP 1: Wait for models
       try {
-        // Show progress while loading
         const progressInterval = setInterval(() => {
           setProgress((prev) => Math.min(prev + 5, 40));
-        }, 300);
+        }, 200);
 
         await modelLoader.promise;
         clearInterval(progressInterval);
@@ -208,14 +170,14 @@ function MobileVerify() {
         throw modelError;
       }
 
-      // ⚡ STEP 2: Load session data
+      // STEP 2: Load session
       setStatus("✨ Loading session...");
       const sessionResponse = await axios.get(
         `${config.API_URL}/api/auth/session/${sessionId}`,
       );
 
       if (!sessionResponse.data.success) {
-        throw new Error("Session expired or invalid");
+        throw new Error("Session expired");
       }
 
       const session = {
@@ -227,7 +189,7 @@ function MobileVerify() {
       console.log("[INIT] ✅ Session loaded");
       setProgress(70);
 
-      // ⚡ STEP 3: Start camera
+      // STEP 3: Start camera
       console.log("[INIT] 📷 Starting camera...");
       setStatus("✨ Starting camera...");
 
@@ -253,7 +215,7 @@ function MobileVerify() {
         if (videoReadyFiredRef.current) return;
         videoReadyFiredRef.current = true;
 
-        console.log("[INIT] ✅ Video metadata loaded");
+        console.log("[INIT] ✅ Video ready");
 
         if (canvasRef.current && videoRef.current) {
           const width = videoRef.current.videoWidth || 640;
@@ -263,9 +225,6 @@ function MobileVerify() {
         }
 
         await videoRef.current.play();
-        console.log("[INIT] ✅ Video playing");
-
-        // Wait a bit for video to stabilize
         await new Promise((resolve) => setTimeout(resolve, 1500));
 
         setProgress(100);
@@ -278,12 +237,12 @@ function MobileVerify() {
     } catch (error) {
       console.error("[INIT] ❌ Error:", error);
       setLoadError(true);
-      setStatus("❌ Initialization failed");
+      setStatus("❌ " + error.message);
       setProgress(0);
 
       if (error.message.includes("Session")) {
         setTimeout(() => {
-          alert("Session expired. Please try again from your computer.");
+          alert("Session expired. Please try again.");
           navigate("/");
         }, 2000);
       }
@@ -291,32 +250,8 @@ function MobileVerify() {
   }, [sessionId, facingMode, navigate]);
 
   const handleRetry = () => {
-    console.log("[RETRY] Attempting retry...", retryCount + 1);
-    setRetryCount(retryCount + 1);
-    setLoadError(false);
-    setProgress(0);
-    setStatus("✨ Retrying...");
-
-    // Reset model loading state for retry
-    modelsLoading = false;
-    modelLoadError = null;
-
-    // Create new promise
-    modelLoader.promise = new Promise((resolve, reject) => {
-      modelLoader.resolve = resolve;
-      modelLoader.reject = reject;
-    });
-
-    // Try loading again
-    preloadModels()
-      .then(() => {
-        initialize();
-      })
-      .catch((err) => {
-        console.error("[RETRY] Failed:", err);
-        setLoadError(true);
-        setStatus("❌ Retry failed. Check your internet connection.");
-      });
+    console.log("[RETRY] Reloading page...");
+    window.location.reload();
   };
 
   const startDetection = () => {
@@ -326,7 +261,7 @@ function MobileVerify() {
     }
 
     if (!modelsLoaded) {
-      console.log("[DETECTION] ⚠️ Models not loaded yet, waiting...");
+      console.log("[DETECTION] ⚠️ Models not ready, waiting...");
       setTimeout(startDetection, 500);
       return;
     }
@@ -338,13 +273,8 @@ function MobileVerify() {
 
     detectionIntervalRef.current = setInterval(async () => {
       if (capturing) return;
-
       if (!videoRef.current || !canvasRef.current) return;
-
       if (videoRef.current.readyState < 2) {
-        if (frameCount === 0) {
-          console.log("[DETECTION] ⏳ Waiting for video ready...");
-        }
         frameCount++;
         return;
       }
@@ -355,28 +285,18 @@ function MobileVerify() {
         const detection = await faceapi
           .detectSingleFace(
             videoRef.current,
-            new faceapi.SsdMobilenetv1Options({
-              minConfidence: 0.3,
-            }),
+            new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 }),
           )
           .withFaceLandmarks()
           .withFaceDescriptor();
 
         const canvas = canvasRef.current;
         const ctx = canvas.getContext("2d");
-
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         if (detection) {
           if (!faceDetected) {
-            console.log("[DETECTION] ✅ FIRST FACE DETECTED!");
-          }
-
-          if (frameCount % 30 === 1) {
-            const conf = Math.round(detection.detection.score * 100);
-            console.log(
-              `[DETECTION] Frame ${frameCount}, Confidence: ${conf}%`,
-            );
+            console.log("[DETECTION] ✅ Face detected!");
           }
 
           setFaceDetected(true);
@@ -385,38 +305,33 @@ function MobileVerify() {
           const box = detection.detection.box;
           const confidence = Math.round(detection.detection.score * 100);
 
-          // Blue box
+          // Draw box
           ctx.strokeStyle = "#00d4ff";
           ctx.lineWidth = 5;
           ctx.strokeRect(box.x, box.y, box.width, box.height);
 
-          // Corner brackets
+          // Corners
           const cornerLen = 35;
           ctx.lineWidth = 7;
-          ctx.strokeStyle = "#00d4ff";
 
-          // Top-left
           ctx.beginPath();
           ctx.moveTo(box.x, box.y + cornerLen);
           ctx.lineTo(box.x, box.y);
           ctx.lineTo(box.x + cornerLen, box.y);
           ctx.stroke();
 
-          // Top-right
           ctx.beginPath();
           ctx.moveTo(box.x + box.width - cornerLen, box.y);
           ctx.lineTo(box.x + box.width, box.y);
           ctx.lineTo(box.x + box.width, box.y + cornerLen);
           ctx.stroke();
 
-          // Bottom-left
           ctx.beginPath();
           ctx.moveTo(box.x, box.y + box.height - cornerLen);
           ctx.lineTo(box.x, box.y + box.height);
           ctx.lineTo(box.x + cornerLen, box.y + box.height);
           ctx.stroke();
 
-          // Bottom-right
           ctx.beginPath();
           ctx.moveTo(box.x + box.width - cornerLen, box.y + box.height);
           ctx.lineTo(box.x + box.width, box.y + box.height);
@@ -459,8 +374,6 @@ function MobileVerify() {
   };
 
   const switchCamera = async () => {
-    console.log("[CAMERA] Switching...");
-
     const newMode = facingMode === "user" ? "environment" : "user";
     setFacingMode(newMode);
     setFaceDetected(false);
@@ -483,7 +396,6 @@ function MobileVerify() {
     try {
       const descriptor = Array.from(currentDetection.descriptor);
 
-      // Connect to Socket.IO
       if (!socketRef.current) {
         socketRef.current = io(config.API_URL, {
           transports: ["websocket", "polling"],
@@ -513,16 +425,10 @@ function MobileVerify() {
   };
 
   useEffect(() => {
-    console.log("[COMPONENT] Mounted");
-
     if (sessionId) {
       initialize();
     }
-
-    return () => {
-      console.log("[COMPONENT] Unmounting...");
-      cleanup();
-    };
+    return () => cleanup();
   }, [sessionId, initialize]);
 
   return (
@@ -537,10 +443,7 @@ function MobileVerify() {
       >
         {/* Header */}
         <div
-          style={{
-            ...styles.header,
-            marginBottom: isMobile ? "20px" : "25px",
-          }}
+          style={{ ...styles.header, marginBottom: isMobile ? "20px" : "25px" }}
         >
           <div>
             <h1
@@ -577,14 +480,14 @@ function MobileVerify() {
           </button>
         </div>
 
-        {/* Progress Bar */}
+        {/* Progress */}
         {!videoReady && !loadError && (
           <div style={styles.progressContainer}>
             <div style={{ ...styles.progressBar, width: `${progress}%` }}></div>
           </div>
         )}
 
-        {/* Video Container */}
+        {/* Video */}
         <div
           style={{
             ...styles.videoBox,
@@ -598,10 +501,9 @@ function MobileVerify() {
             playsInline
             style={styles.video}
           />
-
           <canvas ref={canvasRef} style={styles.canvas} />
 
-          {/* Loading Overlay */}
+          {/* Loading */}
           {!videoReady && !loadError && (
             <div style={styles.overlay}>
               <div
@@ -626,7 +528,7 @@ function MobileVerify() {
                 }}
               >
                 {progress < 50
-                  ? "Loading AI models..."
+                  ? "Loading from /models..."
                   : progress < 70
                     ? "Verifying session..."
                     : progress < 90
@@ -636,13 +538,13 @@ function MobileVerify() {
             </div>
           )}
 
-          {/* Error Overlay */}
+          {/* Error */}
           {loadError && (
             <div style={styles.overlay}>
               <div
                 style={{ textAlign: "center", color: "#fff", padding: "20px" }}
               >
-                <p style={{ fontSize: "28px", marginBottom: "15px" }}>❌</p>
+                <p style={{ fontSize: "32px", marginBottom: "15px" }}>❌</p>
                 <p
                   style={{
                     fontSize: "16px",
@@ -656,62 +558,61 @@ function MobileVerify() {
                   style={{
                     fontSize: "13px",
                     marginBottom: "20px",
-                    color: "#b0b0c9",
+                    color: "#fbbf24",
                   }}
                 >
-                  {modelLoadError
-                    ? "AI models failed to load"
-                    : "Check your internet connection"}
+                  Models are in /models but failed to load
                 </p>
-                <button onClick={handleRetry} style={styles.retryBtn}>
-                  🔄 Retry {retryCount > 0 ? `(Attempt ${retryCount + 1})` : ""}
+                <button
+                  onClick={handleRetry}
+                  style={{ ...styles.retryBtn, marginBottom: "10px" }}
+                >
+                  🔄 Reload Page
                 </button>
-                <p
+                <button
+                  onClick={handleClose}
                   style={{
-                    fontSize: "11px",
-                    marginTop: "15px",
-                    color: "#6c757d",
+                    ...styles.retryBtn,
+                    background: "rgba(239,68,68,0.8)",
                   }}
                 >
-                  💡 Ensure stable internet connection
-                </p>
+                  ← Back
+                </button>
               </div>
             </div>
           )}
 
-          {/* Switch Camera Button */}
+          {/* Controls */}
           {videoReady && !loadError && (
-            <button
-              onClick={switchCamera}
-              style={{
-                ...styles.switchBtn,
-                top: isMobile ? "8px" : "10px",
-                right: isMobile ? "8px" : "10px",
-                padding: isMobile ? "6px 12px" : "8px 16px",
-                fontSize: isMobile ? "11px" : "13px",
-              }}
-            >
-              🔄 {facingMode === "user" ? "Back" : "Front"}
-            </button>
-          )}
-
-          {/* Face Detection Indicator */}
-          {videoReady && !loadError && (
-            <div
-              style={{
-                ...styles.indicator,
-                backgroundColor: faceDetected ? "#00d4ff" : "#fbbf24",
-                bottom: isMobile ? "10px" : "15px",
-                padding: isMobile ? "10px 20px" : "12px 28px",
-                fontSize: isMobile ? "11px" : "13px",
-              }}
-            >
-              {faceDetected ? "✓ FACE DETECTED!" : "⏳ Position Face"}
-            </div>
+            <>
+              <button
+                onClick={switchCamera}
+                style={{
+                  ...styles.switchBtn,
+                  top: isMobile ? "8px" : "10px",
+                  right: isMobile ? "8px" : "10px",
+                  padding: isMobile ? "6px 12px" : "8px 16px",
+                  fontSize: isMobile ? "11px" : "13px",
+                }}
+              >
+                🔄 {facingMode === "user" ? "Back" : "Front"}
+              </button>
+              <div
+                style={{
+                  ...styles.indicator,
+                  backgroundColor: faceDetected ? "#00d4ff" : "#fbbf24",
+                  bottom: isMobile ? "10px" : "15px",
+                  padding: isMobile ? "10px 20px" : "12px 28px",
+                  fontSize: isMobile ? "11px" : "13px",
+                }}
+              >
+                {faceDetected ? "✓ FACE DETECTED!" : "⏳ Position Face"}
+              </div>
+            </>
           )}
         </div>
 
-        {/* Capture Button */}
+        {/* Capture */}
         <button
           onClick={captureFace}
           disabled={!faceDetected || capturing || loadError}
@@ -731,7 +632,7 @@ function MobileVerify() {
           {capturing ? "⏳ Processing..." : "📸 Capture Face"}
         </button>
 
-        {/* Status Box */}
+        {/* Status */}
         <div
           style={{
             ...styles.statusBox,
@@ -749,7 +650,7 @@ function MobileVerify() {
           </p>
         </div>
 
-        {/* Instructions */}
+        {/* Tips */}
         <div
           style={{
             ...styles.instructions,
@@ -772,8 +673,8 @@ function MobileVerify() {
           >
             <li>Face camera directly</li>
             <li>Good lighting needed</li>
-            <li>Wait for AI models to load</li>
-            <li>Blue dots = landmarks detected</li>
+            <li>Models load from local /models</li>
+            <li>Blue dots = ready</li>
           </ul>
         </div>
       </div>
@@ -781,9 +682,6 @@ function MobileVerify() {
   );
 }
 
-/* ================================
-   STYLES
-================================ */
 const styles = {
   container: {
     minHeight: "100vh",
@@ -810,11 +708,7 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "center",
   },
-  title: {
-    margin: 0,
-    color: "#fff",
-    fontWeight: "800",
-  },
+  title: { margin: 0, color: "#fff", fontWeight: "800" },
   subtitle: {
     color: "#b0b0c9",
     margin: "8px 0 0 0",
@@ -851,11 +745,7 @@ const styles = {
     border: "2px solid rgba(0, 212, 255, 0.3)",
     boxShadow: "0 20px 60px rgba(0, 212, 255, 0.3)",
   },
-  video: {
-    width: "100%",
-    display: "block",
-    transform: "scaleX(-1)",
-  },
+  video: { width: "100%", display: "block", transform: "scaleX(-1)" },
   canvas: {
     position: "absolute",
     top: 0,
@@ -877,16 +767,8 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
   },
-  overlayText: {
-    color: "#00d4ff",
-    fontWeight: "600",
-    marginTop: "15px",
-  },
-  overlaySubtext: {
-    color: "#b0b0c9",
-    marginTop: "8px",
-    fontWeight: "500",
-  },
+  overlayText: { color: "#00d4ff", fontWeight: "600", marginTop: "15px" },
+  overlaySubtext: { color: "#b0b0c9", marginTop: "8px", fontWeight: "500" },
   spinner: {
     border: "4px solid rgba(0, 212, 255, 0.2)",
     borderTop: "4px solid #00d4ff",
@@ -902,6 +784,8 @@ const styles = {
     fontSize: "14px",
     fontWeight: "700",
     cursor: "pointer",
+    width: "100%",
+    maxWidth: "200px",
   },
   switchBtn: {
     position: "absolute",
@@ -939,7 +823,6 @@ const styles = {
     boxShadow: "0 10px 30px rgba(0, 212, 255, 0.3)",
     textTransform: "uppercase",
     letterSpacing: "0.5px",
-    cursor: "pointer",
   },
   statusBox: {
     background: "rgba(0, 212, 255, 0.1)",
@@ -972,14 +855,8 @@ const styles = {
   },
 };
 
-// Add CSS animation
 const styleSheet = document.createElement("style");
-styleSheet.innerText = `
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-`;
+styleSheet.innerText = `@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`;
 if (!document.head.querySelector("style[data-mobile-verify]")) {
   styleSheet.setAttribute("data-mobile-verify", "true");
   document.head.appendChild(styleSheet);
