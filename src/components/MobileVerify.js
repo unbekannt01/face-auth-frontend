@@ -44,6 +44,7 @@ function MobileVerify() {
   const [facingMode, setFacingMode] = useState("user");
   const [faceDetected, setFaceDetected] = useState(false);
   const [currentDetection, setCurrentDetection] = useState(null);
+  const [loadError, setLoadError] = useState(false);
 
   // Responsive breakpoints
   const isMobile = useMediaQuery("(max-width: 480px)");
@@ -90,34 +91,81 @@ function MobileVerify() {
         loadModels();
       } else {
         setStatus("✗ Session expired");
+        setTimeout(() => {
+          alert("Session expired. Please try again from your computer.");
+          navigate("/");
+        }, 2000);
       }
     } catch (error) {
       console.error("[SESSION] Error:", error);
       setStatus("✗ Failed to load session");
+      setTimeout(() => {
+        alert("Failed to load session. Please try again.");
+        navigate("/");
+      }, 2000);
     }
-  }, [sessionId]);
+  }, [sessionId, navigate]);
 
   const loadModels = async () => {
     try {
       setStatus("✨ Loading AI models...");
+      setLoadError(false);
       console.log("[MODELS] Loading...");
 
-      const MODEL_URL =
-        "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model";
+      // Try multiple CDN sources with timeout
+      const MODEL_URLS = [
+        "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model",
+        "https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model",
+        "https://justadudewhohacks.github.io/face-api.js/models",
+      ];
 
-      await Promise.all([
-        faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-      ]);
+      let loadSuccess = false;
+      let lastError = null;
 
-      console.log("[MODELS] ✓ LOADED");
+      for (const MODEL_URL of MODEL_URLS) {
+        try {
+          console.log(`[MODELS] Trying CDN: ${MODEL_URL}`);
+
+          // Add timeout to each load attempt (10 seconds per CDN)
+          const loadPromise = Promise.all([
+            faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+            faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+            faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+          ]);
+
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Timeout")), 10000),
+          );
+
+          await Promise.race([loadPromise, timeoutPromise]);
+
+          console.log("[MODELS] ✓ LOADED from", MODEL_URL);
+          loadSuccess = true;
+          break;
+        } catch (err) {
+          console.warn(`[MODELS] Failed from ${MODEL_URL}:`, err.message);
+          lastError = err;
+        }
+      }
+
+      if (!loadSuccess) {
+        throw lastError || new Error("All CDN sources failed");
+      }
+
       setModelsLoaded(true);
+      setLoadError(false);
       startCamera();
     } catch (error) {
-      console.error("[MODELS] Failed:", error);
-      setStatus("✗ Failed to load AI");
+      console.error("[MODELS] All sources failed:", error);
+      setLoadError(true);
+      setStatus("❌ Failed to load AI models");
     }
+  };
+
+  const handleRetry = () => {
+    setLoadError(false);
+    setStatus("✨ Retrying...");
+    loadModels();
   };
 
   const startCamera = async () => {
@@ -179,7 +227,12 @@ function MobileVerify() {
       };
     } catch (error) {
       console.error("[CAMERA] Error:", error);
-      setStatus("✗ Camera denied");
+      setStatus("✗ Camera access denied");
+      setTimeout(() => {
+        alert(
+          "Camera access is required. Please allow camera permissions and try again.",
+        );
+      }, 1000);
     }
   };
 
@@ -449,7 +502,7 @@ function MobileVerify() {
 
           <canvas ref={canvasRef} style={styles.canvas} />
 
-          {!modelsLoaded && (
+          {!modelsLoaded && !loadError && (
             <div style={styles.overlay}>
               <div
                 style={{
@@ -464,12 +517,47 @@ function MobileVerify() {
                   fontSize: isMobile ? "14px" : "16px",
                 }}
               >
-                Loading AI...
+                {status}
               </p>
             </div>
           )}
 
-          {videoReady && (
+          {loadError && (
+            <div style={styles.overlay}>
+              <div style={{ textAlign: "center", color: "#fff" }}>
+                <p style={{ fontSize: "18px", marginBottom: "20px" }}>❌</p>
+                <p style={{ fontSize: "14px", marginBottom: "20px" }}>
+                  Failed to load AI models
+                </p>
+                <button
+                  onClick={handleRetry}
+                  style={{
+                    padding: "12px 24px",
+                    background: "linear-gradient(135deg, #00d4ff, #6366f1)",
+                    color: "#000",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontSize: "14px",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                  }}
+                >
+                  🔄 Retry Loading
+                </button>
+                <p
+                  style={{
+                    fontSize: "12px",
+                    marginTop: "15px",
+                    color: "#b0b0c9",
+                  }}
+                >
+                  Check your internet connection
+                </p>
+              </div>
+            </div>
+          )}
+
+          {videoReady && !loadError && (
             <button
               onClick={switchCamera}
               style={{
@@ -484,7 +572,7 @@ function MobileVerify() {
             </button>
           )}
 
-          {videoReady && (
+          {videoReady && !loadError && (
             <div
               style={{
                 ...styles.indicator,
@@ -501,11 +589,15 @@ function MobileVerify() {
 
         <button
           onClick={captureFace}
-          disabled={!faceDetected || capturing}
+          disabled={!faceDetected || capturing || loadError}
           style={{
             ...styles.captureBtn,
-            backgroundColor: !faceDetected || capturing ? "#ccc" : "#00d4ff",
-            cursor: !faceDetected || capturing ? "not-allowed" : "pointer",
+            backgroundColor:
+              !faceDetected || capturing || loadError ? "#ccc" : "#00d4ff",
+            cursor:
+              !faceDetected || capturing || loadError
+                ? "not-allowed"
+                : "pointer",
             padding: isMobile ? "12px" : "14px",
             fontSize: isMobile ? "14px" : "16px",
             marginBottom: isMobile ? "12px" : "15px",
