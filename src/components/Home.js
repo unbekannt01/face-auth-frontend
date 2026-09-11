@@ -23,7 +23,6 @@ function Home() {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showSecurityModal, setShowSecurityModal] = useState(false);
-  const [showServerModal, setShowServerModal] = useState(false);
   const [showServerStatusModal, setShowServerStatusModal] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [scrollY, setScrollY] = useState(0);
@@ -49,22 +48,12 @@ function Home() {
     };
   }, []);
 
-  useEffect(() => {
-    const hasVisited = sessionStorage.getItem("hasVisitedNeuroVerify");
-    if (!hasVisited) {
-      setTimeout(() => {
-        setShowServerModal(true);
-        sessionStorage.setItem("hasVisitedNeuroVerify", "true");
-      }, 1000);
-    }
-  }, []);
-
   const handleActivateServer = (e) => {
     e.preventDefault();
     setEmailSent(true);
     e.target.submit();
     setTimeout(() => {
-      setShowServerModal(false);
+      setShowServerStatusModal(false);
       setEmailSent(false);
     }, 3000);
   };
@@ -874,7 +863,7 @@ function Home() {
                 onClick={() => setShowServerStatusModal(true)}
                 style={styles.footerLink}
               >
-                Server Status & Contact
+                Troubleshoot
               </button>
             </div>
           </div>
@@ -887,14 +876,6 @@ function Home() {
       </footer>
 
       {/* Modals */}
-      {showServerModal && (
-        <ServerActivationModal
-          onClose={() => setShowServerModal(false)}
-          onSubmit={handleActivateServer}
-          emailSent={emailSent}
-          isMobile={isMobile}
-        />
-      )}
       {showServerStatusModal && (
         <ServerActivationModal
           onClose={() => setShowServerStatusModal(false)}
@@ -1099,7 +1080,7 @@ function Home() {
 //   );
 // }
 
-// Server Activation Modal (Initial Popup)
+// Troubleshoot Modal
 function ServerActivationModal({ onClose, onSubmit, emailSent, isMobile }) {
   return (
     <div style={styles.modalOverlay} onClick={onClose}>
@@ -1111,31 +1092,68 @@ function ServerActivationModal({ onClose, onSubmit, emailSent, isMobile }) {
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={styles.serverModalIcon}>😴</div>
+        <div style={styles.serverModalIcon}>🛠️</div>
         <h2
           style={{
             ...styles.serverModalTitle,
             fontSize: isMobile ? "20px" : "28px",
           }}
         >
-          Oops! Our NeuroVerify is Taking a Power Nap
+          Having Trouble?
         </h2>
         <p style={styles.serverModalText}>
-          Our neural networks are currently in sleep mode to save energy. Don't
-          worry - we can wake them up faster than you can say "biometric
-          authentication"!
+          If login or registration isn't working, the server might need a
+          quick restart. Try these steps:
         </p>
-        <p style={styles.serverModalSubtext}>
-          Just click the button below and we'll send a wake-up call to our
-          servers. They'll be ready to verify your identity in no time! ⚡
-        </p>
-        <div style={styles.warningBox}>
-          <span style={styles.warningIcon}>⚠️</span>
-          <p style={styles.warningText}>
-            <strong>Important:</strong> After clicking the wake-up button,
-            please wait a bit before trying again. Our servers need some time to
-            fully boot up! Multiple requests won't speed up the process.
-          </p>
+        <div style={{
+          textAlign: "left",
+          width: "100%",
+          marginBottom: "20px",
+        }}>
+          <div style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: "12px",
+            marginBottom: "14px",
+            padding: "12px 16px",
+            background: "rgba(0, 212, 255, 0.05)",
+            borderRadius: "12px",
+            border: "1px solid rgba(0, 212, 255, 0.1)",
+          }}>
+            <span style={{ fontSize: "20px", flexShrink: 0 }}>1️⃣</span>
+            <p style={{ ...styles.serverModalSubtext, margin: 0 }}>
+              Click the <strong>"Wake Up Server"</strong> button below to send a restart request.
+            </p>
+          </div>
+          <div style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: "12px",
+            marginBottom: "14px",
+            padding: "12px 16px",
+            background: "rgba(0, 212, 255, 0.05)",
+            borderRadius: "12px",
+            border: "1px solid rgba(0, 212, 255, 0.1)",
+          }}>
+            <span style={{ fontSize: "20px", flexShrink: 0 }}>2️⃣</span>
+            <p style={{ ...styles.serverModalSubtext, margin: 0 }}>
+              Wait <strong>1-2 minutes</strong> for the server to come back online.
+            </p>
+          </div>
+          <div style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: "12px",
+            padding: "12px 16px",
+            background: "rgba(0, 212, 255, 0.05)",
+            borderRadius: "12px",
+            border: "1px solid rgba(0, 212, 255, 0.1)",
+          }}>
+            <span style={{ fontSize: "20px", flexShrink: 0 }}>3️⃣</span>
+            <p style={{ ...styles.serverModalSubtext, margin: 0 }}>
+              Refresh the page and try <strong>login/register</strong> again.
+            </p>
+          </div>
         </div>
 
         {!emailSent ? (
@@ -1148,7 +1166,7 @@ function ServerActivationModal({ onClose, onSubmit, emailSent, isMobile }) {
             <input
               type="hidden"
               name="_subject"
-              value="🚀 NeuroVerify Server Wake-Up Request!"
+              value="🛠️ NeuroVerify Server Troubleshoot Request"
             />
             <input type="hidden" name="_captcha" value="false" />
             <input type="hidden" name="_template" value="box" />
@@ -1156,7 +1174,7 @@ function ServerActivationModal({ onClose, onSubmit, emailSent, isMobile }) {
             <input
               type="hidden"
               name="Message"
-              value="A user is trying to access NeuroVerify. Please wake up the Render server! 🌟"
+              value="A user reported issues with NeuroVerify. Please check the server! 🛠️"
             />
             <input
               type="hidden"
@@ -1168,7 +1186,7 @@ function ServerActivationModal({ onClose, onSubmit, emailSent, isMobile }) {
             <input
               type="hidden"
               name="Request-Type"
-              value="Server Activation"
+              value="Troubleshoot Request"
             />
             <button
               type="submit"
@@ -1186,17 +1204,17 @@ function ServerActivationModal({ onClose, onSubmit, emailSent, isMobile }) {
                 e.target.style.boxShadow = "0 10px 40px rgba(0, 212, 255, 0.4)";
               }}
             >
-              🚀 Wake Up the Server
+              🚀 Wake Up Server
             </button>
           </form>
         ) : (
           <div style={styles.successMessage}>
             <div style={styles.successIcon}>✅</div>
             <p style={styles.successText}>
-              Wake-up call sent! The server should be ready soon.
+              Request sent! The server should be back online soon.
             </p>
             <p style={styles.successSubtext}>
-              Refresh the page and try logging in again shortly!
+              Please wait 1-2 minutes, then refresh and try again.
             </p>
           </div>
         )}
@@ -1207,7 +1225,7 @@ function ServerActivationModal({ onClose, onSubmit, emailSent, isMobile }) {
           onMouseEnter={(e) => (e.target.style.color = "#00d4ff")}
           onMouseLeave={(e) => (e.target.style.color = "#8a8fa8")}
         >
-          I'll wait and try later
+          Close
         </button>
       </div>
     </div>
